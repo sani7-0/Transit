@@ -13,7 +13,18 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        display: ['Nunito', 'sans-serif'],
+      },
       colors: {
+        route: {
+          green: "hsl(var(--route-green))",
+          purple: "hsl(var(--route-purple))",
+          orange: "hsl(var(--route-orange))",
+          blue: "hsl(var(--route-blue))",
+          red: "hsl(var(--route-red))",
+          teal: "hsl(var(--route-teal))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
