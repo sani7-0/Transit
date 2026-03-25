@@ -1,52 +1,44 @@
-import MapArea from "@/components/transit/MapArea";
-import SearchBar from "@/components/transit/SearchBar";
-import RouteCard from "@/components/transit/RouteCard";
-import MetroRouteCard from "@/components/transit/MetroRouteCard";
-import BikeCard from "@/components/transit/BikeCard";
+import { useState } from "react";
+import NearbyScreen from "@/components/transit/screens/NearbyScreen";
+import RouteDetailScreen from "@/components/transit/screens/RouteDetailScreen";
+import TripDetailScreen from "@/components/transit/screens/TripDetailScreen";
+import SearchScreen from "@/components/transit/screens/SearchScreen";
+import ScheduleScreen from "@/components/transit/screens/ScheduleScreen";
+import BottomNav from "@/components/transit/BottomNav";
+
+export type Screen =
+  | "nearby"
+  | "route-detail"
+  | "trip-detail"
+  | "search"
+  | "schedule";
 
 const Index = () => {
+  const [screen, setScreen] = useState<Screen>("nearby");
+
+  const renderScreen = () => {
+    switch (screen) {
+      case "nearby":
+        return <NearbyScreen onNavigate={setScreen} />;
+      case "route-detail":
+        return <RouteDetailScreen onNavigate={setScreen} />;
+      case "trip-detail":
+        return <TripDetailScreen onNavigate={setScreen} />;
+      case "search":
+        return <SearchScreen onNavigate={setScreen} />;
+      case "schedule":
+        return <ScheduleScreen onNavigate={setScreen} />;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background flex items-start justify-center">
+    <div className="min-h-screen bg-muted flex items-start justify-center">
       {/* Phone frame */}
-      <div className="w-full max-w-[390px] min-h-screen md:min-h-0 md:my-8 md:rounded-[2.5rem] md:overflow-hidden md:shadow-2xl md:border md:border-border bg-card">
-        {/* Map */}
-        <MapArea />
-
-        {/* Search bar */}
-        <SearchBar />
-
-        {/* Route cards */}
-        <div className="flex flex-col">
-          <RouteCard
-            routeNumber="55"
-            direction="North"
-            stopName="Station Saint-Laurent / de Maisonneuve"
-            etaMinutes={3}
-            color="hsl(152,60%,42%)"
-          />
-
-          <MetroRouteCard
-            lineNumber="2"
-            direction="Côte-Vertu"
-            stationName="Station Berri-UQAM"
-            etaMinutes={2}
-            lineColor="hsl(30,95%,55%)"
-            cardColor="hsl(270,45%,38%)"
-          />
-
-          <RouteCard
-            routeNumber="15"
-            direction="West"
-            stopName="De Maisonneuve / No 205"
-            etaMinutes={5}
-            color="hsl(200,85%,52%)"
-          />
-
-          <BikeCard />
+      <div className="w-full max-w-[390px] h-[844px] md:my-6 md:rounded-[2.5rem] md:overflow-hidden md:shadow-2xl bg-card relative flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          {renderScreen()}
         </div>
-
-        {/* Bottom safe area */}
-        <div className="h-8 bg-[hsl(5,75%,58%)]" />
+        <BottomNav currentScreen={screen} onNavigate={setScreen} />
       </div>
     </div>
   );
