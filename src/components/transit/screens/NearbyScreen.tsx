@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion, useMotionValue, useTransform, useAnimation } from "framer-motion";
+import { useState, useRef } from "react";
+import { motion, useAnimation, PanInfo } from "framer-motion";
 import MapArea from "@/components/transit/MapArea";
 import SearchBar from "@/components/transit/SearchBar";
 import type { Screen, RouteId } from "@/pages/Index";
@@ -9,71 +9,68 @@ interface NearbyScreenProps {
   onNavigate: (screen: Screen, routeId?: RouteId) => void;
 }
 
-const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
-  const [mapExpanded, setMapExpanded] = useState(false);
-  const controls = useAnimation();
-  const y = useMotionValue(0);
-  const mapHeight = useTransform(y, [0, -200], [280, 560]);
+// Snap points: 0 = default (map 280), 1 = half expanded (map 420), 2 = full map (560)
+const SNAP_POINTS = [0, -140, -280];
+const MAP_HEIGHTS = [280, 420, 560];
 
-  const handleDragEnd = (_: any, info: { offset: { y: number }; velocity: { y: number } }) => {
-    if (info.offset.y < -80 || info.velocity.y < -300) {
-      setMapExpanded(true);
-    } else {
-      setMapExpanded(false);
-      controls.start({ y: 0 });
-    }
+const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
+  const [snapIndex, setSnapIndex] = useState(0);
+  const controls = useAnimation();
+
+  const handleDragEnd = (_: any, info: PanInfo) => {
+    const currentY = SNAP_POINTS[snapIndex];
+    const projectedY = currentY + info.offset.y + info.velocity.y * 0.2;
+
+    // Find closest snap point
+    let closest = 0;
+    let minDist = Infinity;
+    SNAP_POINTS.forEach((point, i) => {
+      const dist = Math.abs(projectedY - point);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = i;
+      }
+    });
+
+    setSnapIndex(closest);
+    controls.start({ y: SNAP_POINTS[closest], transition: { type: "spring", stiffness: 400, damping: 35 } });
   };
 
   return (
-    <div className="flex flex-col relative">
+    <div className="flex flex-col relative overflow-hidden" style={{ height: "100%" }}>
+      {/* Map */}
       <motion.div
-        animate={{ height: mapExpanded ? 560 : 280 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        animate={{ height: MAP_HEIGHTS[snapIndex] }}
+        transition={{ type: "spring", stiffness: 400, damping: 35 }}
+        className="shrink-0"
       >
         <MapArea />
       </motion.div>
 
+      {/* Draggable bottom sheet */}
       <motion.div
-        drag={mapExpanded ? "y" : undefined}
-        dragConstraints={{ top: 0, bottom: 200 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.y > 80) setMapExpanded(false);
-        }}
-      >
-        {mapExpanded && (
-          <div className="flex justify-center py-2 bg-card">
-            <button
-              onClick={() => setMapExpanded(false)}
-              className="w-10 h-1.5 rounded-full bg-muted-foreground/30"
-            />
-          </div>
-        )}
-      </motion.div>
-
-      <motion.div
-        drag={!mapExpanded ? "y" : undefined}
-        dragConstraints={{ top: -200, bottom: 0 }}
-        dragElastic={0.3}
+        drag="y"
+        dragConstraints={{ top: SNAP_POINTS[2], bottom: SNAP_POINTS[0] }}
+        dragElastic={0.15}
         onDragEnd={handleDragEnd}
-        style={!mapExpanded ? { y } : undefined}
         animate={controls}
+        className="flex flex-col flex-1"
+        style={{ touchAction: "none" }}
       >
+        {/* Search bar as drag handle */}
         <div onClick={() => onNavigate("search")} className="cursor-pointer">
           <SearchBar />
         </div>
 
-        {/* Drag handle */}
-        {!mapExpanded && (
-          <div className="flex justify-center py-2 bg-card">
-            <div className="w-10 h-1.5 rounded-full bg-muted-foreground/20" />
-          </div>
-        )}
+        {/* Drag handle indicator */}
+        <div className="flex justify-center py-1.5 bg-card">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
+        </div>
 
         {/* Route cards */}
-        <div className="w-full px-0 py-0">
-          {/* Bus 55 - Green */}
+        <div className="w-full">
           <motion.div
-            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer transition-opacity"
+            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer"
             style={{ backgroundColor: "hsl(152,60%,32%)" }}
             onClick={() => onNavigate("route-detail", "55")}
             whileTap={{ scale: 0.98, opacity: 0.9 }}
@@ -90,9 +87,8 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
             </div>
           </motion.div>
 
-          {/* Metro 2 - Purple */}
           <motion.div
-            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer transition-opacity"
+            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer"
             style={{ backgroundColor: "hsl(268,50%,40%)" }}
             onClick={() => onNavigate("route-detail", "metro2")}
             whileTap={{ scale: 0.98, opacity: 0.9 }}
@@ -117,9 +113,8 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
             </div>
           </motion.div>
 
-          {/* Bus 15 - Blue */}
           <motion.div
-            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer transition-opacity"
+            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer"
             style={{ backgroundColor: "hsl(210,75%,45%)" }}
             onClick={() => onNavigate("route-detail", "15")}
             whileTap={{ scale: 0.98, opacity: 0.9 }}
