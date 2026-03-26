@@ -1,15 +1,7 @@
 import { Settings, Navigation } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
-const createIcon = (color: string, label: string) =>
-  L.divIcon({
-    className: "",
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.3)">${label}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-  });
 
 const markers = [
   { pos: [45.5088, -73.5700] as [number, number], color: "hsl(152,60%,42%)", label: "🚌", name: "Bus 55" },
@@ -20,35 +12,51 @@ const markers = [
 ];
 
 const MapArea = () => {
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: [45.5088, -73.5678],
+      zoom: 15,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png").addTo(map);
+
+    markers.forEach((m) => {
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:28px;height:28px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.3)">${m.label}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      });
+      L.marker(m.pos, { icon }).addTo(map).bindPopup(m.name);
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
   return (
     <div className="relative w-full h-[280px] overflow-hidden">
-      <MapContainer
-        center={[45.5088, -73.5678]}
-        zoom={15}
-        zoomControl={false}
-        attributionControl={false}
-        className="w-full h-full z-0"
-        style={{ background: "hsl(45,30%,92%)" }}
-      >
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-        {markers.map((m, i) => (
-          <Marker key={i} position={m.pos} icon={createIcon(m.color, m.label)}>
-            <Popup>{m.name}</Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+      <div ref={containerRef} className="w-full h-full z-0" />
 
-      {/* Settings gear */}
       <button className="absolute top-4 left-4 z-[1000] w-8 h-8 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center shadow-sm">
         <Settings className="w-4 h-4 text-muted-foreground" />
       </button>
 
-      {/* Navigation button */}
       <button className="absolute top-4 right-4 z-[1000] w-8 h-8 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center shadow-sm">
         <Navigation className="w-4 h-4 text-muted-foreground" />
       </button>
 
-      {/* Neighborhood label */}
       <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[1000]">
         <span className="text-[10px] font-bold tracking-wider text-muted-foreground/60 uppercase bg-card/60 backdrop-blur-sm px-2 py-0.5 rounded">
           Quartier des Spectacles
