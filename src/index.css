@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 20%;
 
-    --primary: 152 45% 40%;
+    --primary: 152 55% 34%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96.1%;
@@ -25,28 +25,28 @@
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 72% 50%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 152 45% 40%;
+    --ring: 152 55% 34%;
 
     --radius: 0.75rem;
 
-    /* Transit route colors - more natural/muted */
-    --route-green: 158 42% 38%;
-    --route-purple: 262 35% 42%;
-    --route-orange: 28 78% 52%;
-    --route-blue: 205 65% 48%;
-    --route-red: 4 58% 52%;
-    --route-teal: 175 45% 38%;
+    /* Transit route colors - vivid, saturated */
+    --route-green: 152 60% 32%;
+    --route-purple: 268 50% 40%;
+    --route-orange: 24 90% 50%;
+    --route-blue: 210 75% 45%;
+    --route-red: 0 70% 48%;
+    --route-teal: 178 55% 35%;
 
     /* Map */
     --map-bg: 45 30% 92%;
 
     /* Search bar */
-    --search-bg: 158 38% 32%;
+    --search-bg: 152 55% 28%;
     --search-foreground: 0 0% 100%;
 
     --sidebar-background: 0 0% 98%;
@@ -69,7 +69,7 @@
     --card-foreground: 0 0% 100%;
     --popover: 225 20% 12%;
     --popover-foreground: 0 0% 95%;
-    --primary: 158 42% 38%;
+    --primary: 152 60% 32%;
     --primary-foreground: 0 0% 100%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;

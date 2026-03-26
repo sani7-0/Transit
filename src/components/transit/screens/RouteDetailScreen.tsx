@@ -1,5 +1,7 @@
 import { X, Pin, Star, Users } from "lucide-react";
+import { motion } from "framer-motion";
 import type { Screen, RouteId } from "@/pages/Index";
+import ETACountdown from "@/components/transit/ETACountdown";
 
 interface RouteDetailScreenProps {
   onNavigate: (screen: Screen) => void;
@@ -11,7 +13,6 @@ const routeData: Record<RouteId, {
   direction: string;
   destination: string;
   color: string;
-  colorLight: string;
   etas: number[];
   rating: number;
   crowding: number;
@@ -21,8 +22,7 @@ const routeData: Record<RouteId, {
     number: "55",
     direction: "North",
     destination: "Station Saint-Laurent",
-    color: "hsl(158,42%,38%)",
-    colorLight: "hsl(158,30%,90%)",
+    color: "hsl(152,60%,32%)",
     etas: [3, 12, 19],
     rating: 4.5,
     crowding: 72,
@@ -36,8 +36,7 @@ const routeData: Record<RouteId, {
     number: "2",
     direction: "Côte-Vertu",
     destination: "Station Berri-UQAM",
-    color: "hsl(262,35%,42%)",
-    colorLight: "hsl(262,25%,90%)",
+    color: "hsl(268,50%,40%)",
     etas: [2, 6, 10],
     rating: 4.7,
     crowding: 86,
@@ -51,8 +50,7 @@ const routeData: Record<RouteId, {
     number: "15",
     direction: "West",
     destination: "De Maisonneuve / No 205",
-    color: "hsl(205,65%,48%)",
-    colorLight: "hsl(205,45%,90%)",
+    color: "hsl(210,75%,45%)",
     etas: [5, 14, 22],
     rating: 4.2,
     crowding: 58,
@@ -68,7 +66,7 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute }: RouteDetailScreenProps
 
   return (
     <div className="flex flex-col bg-card">
-      {/* Map area with route line */}
+      {/* Map area */}
       <div className="relative h-[260px] overflow-hidden" style={{ backgroundColor: "hsl(45,30%,92%)" }}>
         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice">
           <line x1="80" y1="0" x2="80" y2="260" stroke="hsl(0,0%,88%)" strokeWidth="8" />
@@ -78,21 +76,14 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute }: RouteDetailScreenProps
           <line x1="0" y1="80" x2="400" y2="80" stroke="hsl(0,0%,88%)" strokeWidth="8" />
           <line x1="0" y1="180" x2="400" y2="180" stroke="hsl(0,0%,88%)" strokeWidth="8" />
           <rect x="85" y="85" width="70" height="90" rx="4" fill="hsl(120,25%,85%)" />
-
-          {/* Route line */}
           <line x1="200" y1="0" x2="190" y2="260" stroke={route.color} strokeWidth="4" strokeDasharray="8 4" />
-
-          {/* Stops */}
           {route.stops.map((_, i) => (
             <circle key={i} cx={195 - i * 2} cy={60 + i * 70} r="6" fill={i === route.stops.length - 1 ? route.color : "white"} stroke={route.color} strokeWidth="2.5" />
           ))}
-
-          {/* Blue dot - user */}
           <circle cx="230" cy="150" r="6" fill="hsl(210,100%,55%)" />
           <circle cx="230" cy="150" r="10" fill="hsl(210,100%,55%)" fillOpacity="0.2" />
         </svg>
 
-        {/* Route number */}
         <div className="absolute top-10 left-5">
           <span className="text-[64px] font-extrabold font-display leading-none" style={{ color: route.color }}>{route.number}</span>
         </div>
@@ -101,7 +92,7 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute }: RouteDetailScreenProps
           onClick={() => onNavigate("nearby")}
           className="absolute top-4 right-4 w-8 h-8 rounded-full bg-destructive flex items-center justify-center"
         >
-          <X className="w-4 h-4 text-card-foreground" />
+          <X className="w-4 h-4 text-white" />
         </button>
 
         <div className="absolute bottom-16 right-5">
@@ -110,36 +101,23 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute }: RouteDetailScreenProps
           </button>
         </div>
 
-        <div className="absolute bottom-4 right-5">
-          <button className="rounded-2xl px-5 py-2" style={{ backgroundColor: route.color }}>
-            <span className="text-xl font-extrabold text-card-foreground font-display">GO</span>
-          </button>
-        </div>
+        <motion.button
+          className="absolute bottom-4 right-5 rounded-2xl px-5 py-2"
+          style={{ backgroundColor: route.color }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <span className="text-xl font-extrabold text-white font-display">GO</span>
+        </motion.button>
 
         <div className="absolute bottom-4 left-5">
           <span className="text-[11px] font-bold bg-card/60 rounded-full px-2 py-0.5" style={{ color: route.color }}>⊕ {route.direction}</span>
         </div>
       </div>
 
-      {/* ETA Cards */}
+      {/* ETA Cards with live countdown */}
       <div className="flex gap-2 px-4 py-4">
         {route.etas.map((eta, i) => (
-          <div
-            key={i}
-            className="flex-1 rounded-2xl flex flex-col items-center justify-center py-3"
-            style={{ backgroundColor: i === 0 ? route.color : route.colorLight }}
-          >
-            <div className="flex items-baseline">
-              <span
-                className="text-[36px] font-extrabold font-display leading-none"
-                style={{ color: i === 0 ? "white" : route.color }}
-              >
-                {eta}
-              </span>
-              <span className="text-[7px] font-bold ml-0.5 mb-4" style={{ color: i === 0 ? "rgba(255,255,255,0.6)" : route.color, opacity: i === 0 ? 1 : 0.6 }}>ᐩ</span>
-            </div>
-            <span className="text-[10px] font-semibold" style={{ color: i === 0 ? "rgba(255,255,255,0.75)" : route.color, opacity: i === 0 ? 1 : 0.75 }}>minutes</span>
-          </div>
+          <ETACountdown key={i} initialMinutes={eta} color={route.color} highlighted={i === 0} />
         ))}
       </div>
 
@@ -161,19 +139,23 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute }: RouteDetailScreenProps
           <span className="text-[11px] font-semibold">🚶 2 minutes</span>
         </div>
         {route.stops.map((stop, i) => (
-          <div key={i} className="flex items-start justify-between py-2.5 border-b border-border/30 last:border-b-0">
+          <motion.div
+            key={i}
+            className="flex items-start justify-between py-2.5 border-b border-border/30 last:border-b-0 cursor-pointer"
+            whileTap={{ scale: 0.98, backgroundColor: "hsl(var(--muted))" }}
+          >
             <div className="flex flex-col gap-1">
               <span className="text-sm font-bold text-foreground">{stop.name}</span>
               {stop.routes.length > 0 && (
                 <div className="flex items-center gap-1">
                   {stop.routes.map((r) => (
-                    <span key={r} className="text-[9px] font-bold text-card-foreground rounded px-1.5 py-0.5" style={{ backgroundColor: route.color }}>{r}</span>
+                    <span key={r} className="text-[9px] font-bold text-white rounded px-1.5 py-0.5" style={{ backgroundColor: route.color }}>{r}</span>
                   ))}
                 </div>
               )}
             </div>
             <span className="text-xs font-semibold text-muted-foreground">{stop.time}</span>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

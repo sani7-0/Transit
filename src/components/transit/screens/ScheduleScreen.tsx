@@ -1,40 +1,94 @@
-import { X, Accessibility, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Clock, AlertCircle } from "lucide-react";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Screen } from "@/pages/Index";
 
 interface RouteSchedule {
   number: string;
+  type: "bus" | "metro";
   direction: string;
   destination: string;
   color: string;
-  currentTimes: string[];
-  nextTimes: string[];
+  schedule: {
+    label: string;
+    times: { time: string; eta?: string; status?: "on-time" | "delayed" | "arriving" }[];
+  }[];
 }
 
 const routes: RouteSchedule[] = [
   {
-    number: "51",
-    direction: "West",
-    destination: "Édouard-Montpetit / Woodbury",
-    color: "hsl(262,35%,42%)",
-    currentTimes: ["9:11 AM", "9:19 AM", "9:25 AM", "9:34 AM", "9:43 AM", "9:52 AM"],
-    nextTimes: ["10:08 AM", "10:24 AM", "10:40 AM", "10:56 AM"],
+    number: "55",
+    type: "bus",
+    direction: "North",
+    destination: "Station Saint-Laurent",
+    color: "hsl(152,60%,32%)",
+    schedule: [
+      {
+        label: "Now",
+        times: [
+          { time: "9:14 AM", eta: "3 min", status: "arriving" },
+          { time: "9:22 AM", eta: "11 min", status: "on-time" },
+          { time: "9:30 AM", eta: "19 min", status: "on-time" },
+        ],
+      },
+      {
+        label: "Later",
+        times: [
+          { time: "9:38 AM", status: "on-time" },
+          { time: "9:50 AM", status: "on-time" },
+          { time: "10:05 AM", status: "on-time" },
+        ],
+      },
+    ],
   },
   {
-    number: "55",
-    direction: "North",
-    destination: "Station Saint-Laurent / de Maisonneuve",
-    color: "hsl(158,42%,38%)",
-    currentTimes: ["9:05 AM", "9:14 AM", "9:22 AM", "9:30 AM", "9:38 AM"],
-    nextTimes: ["9:50 AM", "10:05 AM", "10:20 AM"],
+    number: "51",
+    type: "bus",
+    direction: "West",
+    destination: "Édouard-Montpetit",
+    color: "hsl(268,50%,40%)",
+    schedule: [
+      {
+        label: "Now",
+        times: [
+          { time: "9:11 AM", eta: "0 min", status: "arriving" },
+          { time: "9:19 AM", eta: "8 min", status: "on-time" },
+          { time: "9:25 AM", eta: "14 min", status: "delayed" },
+        ],
+      },
+      {
+        label: "Later",
+        times: [
+          { time: "9:34 AM", status: "on-time" },
+          { time: "9:43 AM", status: "on-time" },
+          { time: "9:52 AM", status: "on-time" },
+        ],
+      },
+    ],
   },
   {
     number: "15",
+    type: "bus",
     direction: "West",
     destination: "De Maisonneuve / No 205",
-    color: "hsl(205,65%,48%)",
-    currentTimes: ["9:08 AM", "9:18 AM", "9:28 AM", "9:38 AM"],
-    nextTimes: ["9:55 AM", "10:10 AM", "10:25 AM", "10:40 AM"],
+    color: "hsl(210,75%,45%)",
+    schedule: [
+      {
+        label: "Now",
+        times: [
+          { time: "9:18 AM", eta: "7 min", status: "on-time" },
+          { time: "9:28 AM", eta: "17 min", status: "on-time" },
+        ],
+      },
+      {
+        label: "Later",
+        times: [
+          { time: "9:38 AM", status: "on-time" },
+          { time: "9:55 AM", status: "delayed" },
+          { time: "10:10 AM", status: "on-time" },
+        ],
+      },
+    ],
   },
 ];
 
@@ -44,104 +98,134 @@ interface ScheduleScreenProps {
 
 const ScheduleScreen = ({ onNavigate }: ScheduleScreenProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
   const route = routes[currentIndex];
 
-  const prev = () => setCurrentIndex((i) => (i - 1 + routes.length) % routes.length);
-  const next = () => setCurrentIndex((i) => (i + 1) % routes.length);
+  const goTo = (i: number) => {
+    setDirection(i > currentIndex ? 1 : -1);
+    setCurrentIndex(i);
+  };
+  const prev = () => { setDirection(-1); setCurrentIndex((i) => (i - 1 + routes.length) % routes.length); };
+  const next = () => { setDirection(1); setCurrentIndex((i) => (i + 1) % routes.length); };
+
+  const statusColor = (status?: string) => {
+    if (status === "arriving") return route.color;
+    if (status === "delayed") return "hsl(0,70%,48%)";
+    return "hsl(var(--muted-foreground))";
+  };
+
+  const statusLabel = (status?: string) => {
+    if (status === "arriving") return "Arriving";
+    if (status === "delayed") return "Delayed";
+    return "On time";
+  };
 
   return (
-    <div className="flex flex-col min-h-full" style={{ backgroundColor: route.color }}>
+    <div className="flex flex-col min-h-full bg-card">
       {/* Header */}
-      <div className="px-5 pt-6 pb-4 flex items-start justify-between">
-        <div>
-          <span className="text-[56px] font-extrabold text-card-foreground font-display leading-none">
-            {route.number}
-          </span>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="text-[11px] font-bold text-card-foreground/90 bg-card/15 rounded-full px-2 py-0.5">
-              ⊕ {route.direction}
+      <div className="px-5 pt-6 pb-4" style={{ backgroundColor: route.color }}>
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="text-[52px] font-extrabold text-white font-display leading-none">
+              {route.number}
+            </span>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[11px] font-bold text-white/90 bg-white/15 rounded-full px-2 py-0.5">
+                ⊕ {route.direction}
+              </span>
+            </div>
+            <span className="text-sm font-semibold text-white/80 mt-1 block">
+              {route.destination}
             </span>
           </div>
-          <span className="text-sm font-semibold text-card-foreground/80 mt-1 block">
-            {route.destination}
-          </span>
+          <button
+            onClick={() => onNavigate("nearby")}
+            className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mt-2"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
         </div>
-        <button
-          onClick={() => onNavigate("nearby")}
-          className="w-8 h-8 rounded-full bg-card/20 flex items-center justify-center mt-2"
+
+        {/* Route switcher pills */}
+        <div className="flex items-center gap-2 mt-4">
+          <button onClick={prev} className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+            <ChevronLeft className="w-4 h-4 text-white" />
+          </button>
+          <div className="flex gap-1.5 flex-1 justify-center">
+            {routes.map((r, i) => (
+              <motion.button
+                key={r.number}
+                onClick={() => goTo(i)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold font-display transition-all ${
+                  i === currentIndex
+                    ? "bg-white text-foreground shadow-sm"
+                    : "bg-white/20 text-white"
+                }`}
+                whileTap={{ scale: 0.95 }}
+              >
+                {r.number}
+              </motion.button>
+            ))}
+          </div>
+          <button onClick={next} className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+            <ChevronRight className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      </div>
+
+      {/* Schedule content */}
+      <AnimatePresence mode="wait" custom={direction}>
+        <motion.div
+          key={currentIndex}
+          custom={direction}
+          initial={{ x: direction > 0 ? 80 : -80, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: direction > 0 ? -80 : 80, opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex flex-col px-4 py-4 gap-4"
         >
-          <X className="w-4 h-4 text-card-foreground" />
-        </button>
-      </div>
+          {route.schedule.map((block) => (
+            <div key={block.label} className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/30" style={{ borderLeftWidth: 4, borderLeftColor: route.color }}>
+                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-bold text-foreground uppercase tracking-wide">{block.label}</span>
+              </div>
 
-      {/* Route switcher */}
-      <div className="px-5 pb-3 flex items-center gap-2">
-        <button onClick={prev} className="w-7 h-7 rounded-full bg-card/20 flex items-center justify-center">
-          <ChevronLeft className="w-4 h-4 text-card-foreground" />
-        </button>
-        <div className="flex gap-1.5 flex-1 justify-center">
-          {routes.map((r, i) => (
-            <button
-              key={r.number}
-              onClick={() => setCurrentIndex(i)}
-              className={`px-3 py-1 rounded-full text-xs font-bold font-display transition-all ${
-                i === currentIndex
-                  ? "bg-card text-foreground"
-                  : "bg-card/20 text-card-foreground"
-              }`}
-            >
-              {r.number}
-            </button>
+              {block.times.map((t, i) => (
+                <motion.div
+                  key={t.time}
+                  className="flex items-center justify-between px-4 py-3 border-b border-border/20 last:border-b-0"
+                  whileTap={{ backgroundColor: "hsl(var(--muted))" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-foreground font-display w-20">{t.time}</span>
+                    {t.eta && (
+                      <span
+                        className="text-xs font-extrabold font-display px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: `${route.color}18`,
+                          color: route.color,
+                        }}
+                      >
+                        {t.eta}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {t.status === "delayed" && <AlertCircle className="w-3 h-3" style={{ color: statusColor(t.status) }} />}
+                    <span
+                      className="text-[11px] font-bold"
+                      style={{ color: statusColor(t.status) }}
+                    >
+                      {statusLabel(t.status)}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           ))}
-        </div>
-        <button onClick={next} className="w-7 h-7 rounded-full bg-card/20 flex items-center justify-center">
-          <ChevronRight className="w-4 h-4 text-card-foreground" />
-        </button>
-      </div>
-
-      {/* Schedule blocks */}
-      <div className="px-4 pb-6 flex flex-col gap-3">
-        <div className="bg-card rounded-2xl overflow-hidden">
-          <div className="h-1" style={{ backgroundColor: route.color }} />
-          <div className="p-3 flex flex-col gap-0">
-            {route.currentTimes.map((time, i) => (
-              <div key={time} className={`py-2.5 px-2 rounded-lg ${i === 1 || i === 2 ? "font-extrabold" : ""}`}>
-                <div className="flex items-center gap-1.5">
-                  {i === 1 && <span style={{ color: route.color }} className="text-xs">▸</span>}
-                  <span
-                    className={`text-sm font-display ${
-                      i === 1 ? "font-extrabold text-foreground" : i === 2 ? "font-bold" : "font-semibold text-muted-foreground"
-                    }`}
-                    style={i === 2 ? { color: route.color } : undefined}
-                  >
-                    {time}
-                  </span>
-                  {(i === 1 || i === 2) && (
-                    <span className="text-[7px] font-bold mb-1" style={{ color: route.color, opacity: 0.6 }}>ᐩ</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-card rounded-2xl overflow-hidden">
-          <div className="h-1" style={{ backgroundColor: route.color }} />
-          <div className="p-3 flex flex-col gap-0">
-            {route.nextTimes.map((time) => (
-              <div key={time} className="py-2.5 px-2">
-                <span className="text-sm font-semibold text-muted-foreground font-display">{time}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="px-5 pb-6 mt-auto flex justify-end">
-        <button className="w-10 h-10 rounded-full bg-card/20 flex items-center justify-center">
-          <Accessibility className="w-5 h-5 text-card-foreground" />
-        </button>
-      </div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
