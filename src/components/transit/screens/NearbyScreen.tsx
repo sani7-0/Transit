@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion, useAnimation, PanInfo } from "framer-motion";
 import MapArea from "@/components/transit/MapArea";
 import SearchBar from "@/components/transit/SearchBar";
@@ -9,7 +9,6 @@ interface NearbyScreenProps {
   onNavigate: (screen: Screen, routeId?: RouteId) => void;
 }
 
-// Snap points: 0 = default (map 280), 1 = half expanded (map 420), 2 = full map (560)
 const SNAP_POINTS = [0, -140, -280];
 const MAP_HEIGHTS = [280, 420, 560];
 
@@ -21,7 +20,6 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
     const currentY = SNAP_POINTS[snapIndex];
     const projectedY = currentY + info.offset.y + info.velocity.y * 0.2;
 
-    // Find closest snap point
     let closest = 0;
     let minDist = Infinity;
     SNAP_POINTS.forEach((point, i) => {
@@ -35,6 +33,8 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
     setSnapIndex(closest);
     controls.start({ y: SNAP_POINTS[closest], transition: { type: "spring", stiffness: 400, damping: 35 } });
   };
+
+  const isLifted = snapIndex === 0;
 
   return (
     <div className="flex flex-col relative overflow-hidden" style={{ height: "100%" }}>
@@ -54,24 +54,33 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
         dragElastic={0.15}
         onDragEnd={handleDragEnd}
         animate={controls}
-        className="flex flex-col flex-1"
-        style={{ touchAction: "none" }}
+        className="flex flex-col flex-1 rounded-t-3xl -mt-4 relative z-10 bg-card"
+        style={{
+          touchAction: "none",
+          boxShadow: isLifted
+            ? "var(--sheet-shadow-lifted)"
+            : "var(--sheet-shadow)",
+        }}
       >
-        {/* Search bar as drag handle */}
-        <div onClick={() => onNavigate("search")} className="cursor-pointer">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <motion.div
+            className="w-10 h-1 rounded-full bg-muted-foreground/30"
+            animate={{ width: isLifted ? 40 : 28, opacity: isLifted ? 1 : 0.5 }}
+            transition={{ duration: 0.2 }}
+          />
+        </div>
+
+        {/* Search bar as tap target */}
+        <div onClick={() => onNavigate("search")} className="cursor-pointer px-1">
           <SearchBar />
         </div>
 
-        {/* Drag handle indicator */}
-        <div className="flex justify-center py-1.5 bg-card">
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
-        </div>
-
         {/* Route cards */}
-        <div className="w-full">
+        <div className="w-full mt-1">
           <motion.div
-            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer"
-            style={{ backgroundColor: "hsl(152,60%,32%)" }}
+            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer border-b border-border/10"
+            style={{ backgroundColor: "hsl(var(--route-green))" }}
             onClick={() => onNavigate("route-detail", "55")}
             whileTap={{ scale: 0.98, opacity: 0.9 }}
           >
@@ -83,13 +92,13 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
               <span className="text-[11px] font-semibold text-white/80 mt-0.5">Station Saint-Laurent</span>
             </div>
             <div className="w-20">
-              <ETACountdown initialMinutes={3} color="hsl(152,60%,32%)" highlighted />
+              <ETACountdown initialMinutes={3} color="hsl(var(--route-green))" highlighted />
             </div>
           </motion.div>
 
           <motion.div
-            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer"
-            style={{ backgroundColor: "hsl(268,50%,40%)" }}
+            className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer border-b border-border/10"
+            style={{ backgroundColor: "hsl(var(--route-purple))" }}
             onClick={() => onNavigate("route-detail", "metro2")}
             whileTap={{ scale: 0.98, opacity: 0.9 }}
           >
@@ -99,7 +108,7 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
                   <circle cx="12" cy="12" r="11" stroke="white" strokeWidth="2" />
                   <path d="M6 16L9 8H11L12 12L13 8H15L18 16" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: "hsl(24,90%,50%)" }}>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center bg-route-orange">
                   <span className="text-xs font-extrabold text-white font-display">2</span>
                 </div>
               </div>
@@ -109,13 +118,13 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
               <span className="text-[11px] font-semibold text-white/80 mt-0.5">Station Berri-UQAM</span>
             </div>
             <div className="w-20">
-              <ETACountdown initialMinutes={2} color="hsl(268,50%,40%)" highlighted />
+              <ETACountdown initialMinutes={2} color="hsl(var(--route-purple))" highlighted />
             </div>
           </motion.div>
 
           <motion.div
             className="w-full px-5 py-3.5 flex items-center justify-between cursor-pointer"
-            style={{ backgroundColor: "hsl(210,75%,45%)" }}
+            style={{ backgroundColor: "hsl(var(--route-blue))" }}
             onClick={() => onNavigate("route-detail", "15")}
             whileTap={{ scale: 0.98, opacity: 0.9 }}
           >
@@ -127,7 +136,7 @@ const NearbyScreen = ({ onNavigate }: NearbyScreenProps) => {
               <span className="text-[11px] font-semibold text-white/80 mt-0.5">De Maisonneuve / No 205</span>
             </div>
             <div className="w-20">
-              <ETACountdown initialMinutes={5} color="hsl(210,75%,45%)" highlighted />
+              <ETACountdown initialMinutes={5} color="hsl(var(--route-blue))" highlighted />
             </div>
           </motion.div>
         </div>
