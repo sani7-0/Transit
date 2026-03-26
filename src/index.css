@@ -4,11 +4,11 @@
 
 @layer base {
   :root {
-    --background: 220 15% 95%;
-    --foreground: 220 20% 18%;
+    --background: 0 0% 97%;
+    --foreground: 220 20% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 100%;
+    --card-foreground: 220 20% 14%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 20%;
@@ -16,30 +16,30 @@
     --primary: 152 55% 34%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 18% 93%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 20% 94%;
+    --muted: 210 14% 93%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 18% 93%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 72% 50%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
     --ring: 152 55% 34%;
 
     --radius: 0.75rem;
 
-    /* Transit route colors - vivid, saturated */
+    /* Transit route colors - vivid */
     --route-green: 152 60% 32%;
-    --route-purple: 268 50% 40%;
-    --route-orange: 24 90% 50%;
-    --route-blue: 210 75% 45%;
-    --route-red: 0 70% 48%;
+    --route-purple: 268 55% 42%;
+    --route-orange: 24 95% 50%;
+    --route-blue: 210 80% 45%;
+    --route-red: 0 72% 48%;
     --route-teal: 178 55% 35%;
 
     /* Map */
@@ -49,6 +49,10 @@
     --search-bg: 152 55% 28%;
     --search-foreground: 0 0% 100%;
 
+    /* Sheet shadow */
+    --sheet-shadow: 0 -8px 30px -5px hsla(0, 0%, 0%, 0.1);
+    --sheet-shadow-lifted: 0 -16px 50px -5px hsla(0, 0%, 0%, 0.2);
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -56,40 +60,51 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 217 91% 60%;
 
-    /* Font */
     --font-display: 'Nunito', sans-serif;
   }
 
   .dark {
-    --background: 225 20% 8%;
+    --background: 225 25% 6%;
     --foreground: 0 0% 95%;
-    --card: 225 20% 12%;
-    --card-foreground: 0 0% 100%;
-    --popover: 225 20% 12%;
+    --card: 225 22% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 225 22% 10%;
     --popover-foreground: 0 0% 95%;
-    --primary: 152 60% 32%;
+    --primary: 152 65% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 220 20% 16%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 220 18% 15%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 220 20% 16%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --destructive: 0 63% 35%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 18% 18%;
+    --input: 220 18% 18%;
+    --ring: 152 65% 40%;
+
+    /* Neon route colors for dark mode */
+    --route-green: 152 70% 45%;
+    --route-purple: 268 65% 55%;
+    --route-orange: 24 100% 55%;
+    --route-blue: 210 90% 55%;
+    --route-red: 0 80% 55%;
+    --route-teal: 178 65% 45%;
+
+    --sheet-shadow: 0 -8px 30px -5px hsla(152, 65%, 40%, 0.15);
+    --sheet-shadow-lifted: 0 -16px 50px -5px hsla(152, 65%, 40%, 0.25);
+
+    --sidebar-background: 225 25% 8%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 152 65% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 220 18% 14%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 220 18% 14%;
+    --sidebar-ring: 152 65% 40%;
   }
 }
 

@@ -31,11 +31,17 @@ const Index = () => {
   const [screen, setScreen] = useState<Screen>("nearby");
   const [selectedRoute, setSelectedRoute] = useState<RouteId>("55");
   const [direction, setDirection] = useState(1);
+  const [isDark, setIsDark] = useState(false);
 
   const handleNavigate = (s: Screen, routeId?: RouteId) => {
     setDirection(screenOrder[s] > screenOrder[screen] ? 1 : -1);
     setScreen(s);
     if (routeId) setSelectedRoute(routeId);
+  };
+
+  const toggleDark = () => {
+    setIsDark(!isDark);
+    document.documentElement.classList.toggle("dark");
   };
 
   const renderScreen = () => {
@@ -71,8 +77,16 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted flex items-start justify-center">
+    <div className="min-h-screen bg-background flex items-start justify-center">
       <div className="w-full max-w-[390px] h-[844px] md:my-6 md:rounded-[2.5rem] md:overflow-hidden md:shadow-2xl bg-card relative flex flex-col overflow-hidden">
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleDark}
+          className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-muted/80 flex items-center justify-center text-xs"
+        >
+          {isDark ? "☀️" : "🌙"}
+        </button>
+
         <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
