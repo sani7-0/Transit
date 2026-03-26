@@ -4,11 +4,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 const markers = [
-  { pos: [45.5088, -73.5700] as [number, number], color: "hsl(152,60%,42%)", label: "🚌", name: "Bus 55" },
-  { pos: [45.5095, -73.5650] as [number, number], color: "hsl(200,85%,52%)", label: "🚌", name: "Bus 15" },
-  { pos: [45.5078, -73.5680] as [number, number], color: "hsl(270,50%,40%)", label: "Ⓜ", name: "Metro" },
-  { pos: [45.5070, -73.5630] as [number, number], color: "hsl(5,75%,58%)", label: "🚲", name: "BIXI" },
-  { pos: [45.5100, -73.5720] as [number, number], color: "hsl(5,75%,58%)", label: "🚲", name: "BIXI" },
+  { pos: [45.5088, -73.5700] as [number, number], color: "hsl(158,42%,38%)", label: "🚌", name: "Bus 55" },
+  { pos: [45.5095, -73.5650] as [number, number], color: "hsl(205,65%,48%)", label: "🚌", name: "Bus 15" },
+  { pos: [45.5078, -73.5680] as [number, number], color: "hsl(262,35%,42%)", label: "Ⓜ", name: "Metro Line 2" },
 ];
 
 const MapArea = () => {
@@ -30,12 +28,21 @@ const MapArea = () => {
     markers.forEach((m) => {
       const icon = L.divIcon({
         className: "",
-        html: `<div style="width:28px;height:28px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.3)">${m.label}</div>`,
+        html: `<div style="width:28px;height:28px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.25)">${m.label}</div>`,
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
       L.marker(m.pos, { icon }).addTo(map).bindPopup(m.name);
     });
+
+    // User location
+    const userIcon = L.divIcon({
+      className: "",
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:hsl(210,100%,55%);border:3px solid white;box-shadow:0 0 8px rgba(59,130,246,.4)"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+    L.marker([45.5085, -73.5670], { icon: userIcon }).addTo(map);
 
     mapRef.current = map;
 

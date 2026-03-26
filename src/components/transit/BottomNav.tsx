@@ -1,4 +1,4 @@
-import { Map, Search, Clock } from "lucide-react";
+import { Map, Search, Clock, Route } from "lucide-react";
 import type { Screen } from "@/pages/Index";
 
 interface BottomNavProps {
@@ -10,6 +10,7 @@ const BottomNav = ({ currentScreen, onNavigate }: BottomNavProps) => {
   const items: { icon: typeof Map; label: string; screen: Screen }[] = [
     { icon: Map, label: "Nearby", screen: "nearby" },
     { icon: Search, label: "Search", screen: "search" },
+    { icon: Route, label: "Planner", screen: "planner" },
     { icon: Clock, label: "Schedule", screen: "schedule" },
   ];
 
