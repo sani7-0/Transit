@@ -1,49 +1,44 @@
 import { Settings, Navigation } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import type { RouteId } from "@/pages/Index";
+
+const routeIdMap: RouteId[] = ["55", "15", "metro2"];
 
 const staticMarkers = [
-  { pos: [45.5088, -73.5700] as [number, number], color: "hsl(152,60%,32%)", label: "🚌", name: "Bus 55" },
-  { pos: [45.5095, -73.5650] as [number, number], color: "hsl(210,75%,45%)", label: "🚌", name: "Bus 15" },
-  { pos: [45.5078, -73.5680] as [number, number], color: "hsl(268,50%,40%)", label: "Ⓜ", name: "Metro Line 2" },
+  { pos: [45.5088, -73.5700] as [number, number], color: "hsl(152,60%,32%)", label: "🚌", name: "Bus 55", routeId: "55" as RouteId },
+  { pos: [45.5095, -73.5650] as [number, number], color: "hsl(210,75%,45%)", label: "🚌", name: "Bus 15", routeId: "15" as RouteId },
+  { pos: [45.5078, -73.5680] as [number, number], color: "hsl(268,50%,40%)", label: "Ⓜ", name: "Metro Line 2", routeId: "metro2" as RouteId },
 ];
 
-// Route polylines
-const routePaths: { color: string; path: [number, number][] }[] = [
+const routePaths: { color: string; routeId: RouteId; path: [number, number][] }[] = [
   {
     color: "hsl(152,60%,32%)",
+    routeId: "55",
     path: [
-      [45.5055, -73.5720],
-      [45.5070, -73.5710],
-      [45.5088, -73.5700],
-      [45.5105, -73.5690],
-      [45.5120, -73.5680],
+      [45.5055, -73.5720], [45.5070, -73.5710], [45.5088, -73.5700],
+      [45.5105, -73.5690], [45.5120, -73.5680],
     ],
   },
   {
     color: "hsl(210,75%,45%)",
+    routeId: "15",
     path: [
-      [45.5095, -73.5700],
-      [45.5095, -73.5675],
-      [45.5095, -73.5650],
-      [45.5095, -73.5625],
-      [45.5095, -73.5600],
+      [45.5095, -73.5700], [45.5095, -73.5675], [45.5095, -73.5650],
+      [45.5095, -73.5625], [45.5095, -73.5600],
     ],
   },
   {
     color: "hsl(268,50%,40%)",
+    routeId: "metro2",
     path: [
-      [45.5060, -73.5650],
-      [45.5070, -73.5665],
-      [45.5078, -73.5680],
-      [45.5090, -73.5695],
-      [45.5100, -73.5710],
+      [45.5060, -73.5650], [45.5070, -73.5665], [45.5078, -73.5680],
+      [45.5090, -73.5695], [45.5100, -73.5710],
     ],
   },
 ];
 
-// Interpolate between two points
 const lerp = (a: [number, number], b: [number, number], t: number): [number, number] => [
   a[0] + (b[0] - a[0]) * t,
   a[1] + (b[1] - a[1]) * t,
@@ -56,11 +51,16 @@ const getPositionOnPath = (path: [number, number][], progress: number): [number,
   return lerp(path[segment], path[segment + 1], segProgress);
 };
 
-const MapArea = () => {
+interface MapAreaProps {
+  onRouteClick?: (routeId: RouteId) => void;
+}
+
+const MapArea = ({ onRouteClick }: MapAreaProps) => {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const busMarkersRef = useRef<L.Marker[]>([]);
   const animFrameRef = useRef<number>(0);
+  const onRouteClickRef = useRef(onRouteClick);
+  onRouteClickRef.current = onRouteClick;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -74,14 +74,35 @@ const MapArea = () => {
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png").addTo(map);
 
-    // Draw route lines
+    // Draw clickable route lines
     routePaths.forEach((route) => {
-      L.polyline(route.path, {
+      // Invisible wide polyline for easier clicking
+      const hitArea = L.polyline(route.path, {
+        color: "transparent",
+        weight: 20,
+        opacity: 0,
+      }).addTo(map);
+
+      // Visible dashed line
+      const line = L.polyline(route.path, {
         color: route.color,
         weight: 4,
         opacity: 0.5,
         dashArray: "8 6",
       }).addTo(map);
+
+      const handleClick = () => onRouteClickRef.current?.(route.routeId);
+
+      // Hover effects on visible line
+      hitArea.on("mouseover", () => {
+        line.setStyle({ weight: 7, opacity: 0.9, dashArray: undefined });
+        hitArea.getElement()?.style.setProperty("cursor", "pointer");
+      });
+      hitArea.on("mouseout", () => {
+        line.setStyle({ weight: 4, opacity: 0.5, dashArray: "8 6" });
+      });
+      hitArea.on("click", handleClick);
+      line.on("click", handleClick);
     });
 
     // Static stop markers
@@ -92,7 +113,8 @@ const MapArea = () => {
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
-      L.marker(m.pos, { icon }).addTo(map).bindPopup(m.name);
+      const marker = L.marker(m.pos, { icon }).addTo(map).bindPopup(m.name);
+      marker.on("click", () => onRouteClickRef.current?.(m.routeId));
     });
 
     // User location
@@ -104,22 +126,20 @@ const MapArea = () => {
     });
     L.marker([45.5085, -73.5670], { icon: userIcon }).addTo(map);
 
-    // Create animated bus dot markers
+    // Animated bus dots
     const busMarkers = routePaths.map((route) => {
       const dotIcon = L.divIcon({
         className: "",
-        html: `<div style="width:12px;height:12px;border-radius:50%;background:${route.color};border:2px solid white;box-shadow:0 0 10px ${route.color},0 2px 6px rgba(0,0,0,.3);transition:transform 0.1s"></div>`,
+        html: `<div style="width:12px;height:12px;border-radius:50%;background:${route.color};border:2px solid white;box-shadow:0 0 10px ${route.color},0 2px 6px rgba(0,0,0,.3)"></div>`,
         iconSize: [12, 12],
         iconAnchor: [6, 6],
       });
       return L.marker(route.path[0], { icon: dotIcon, zIndexOffset: 1000 }).addTo(map);
     });
-    busMarkersRef.current = busMarkers;
 
-    // Animate bus positions
-    const speeds = [0.00004, 0.00003, 0.000035]; // different speeds per route
+    const speeds = [0.00004, 0.00003, 0.000035];
     const offsets = [0, 0.33, 0.66];
-    let startTime = Date.now();
+    const startTime = Date.now();
 
     const animate = () => {
       const elapsed = (Date.now() - startTime) / 1000;

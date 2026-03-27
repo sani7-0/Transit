@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, useAnimation, PanInfo } from "framer-motion";
-import { Heart } from "lucide-react";
+import { Heart, RefreshCw } from "lucide-react";
 import MapArea from "@/components/transit/MapArea";
 import SearchBar from "@/components/transit/SearchBar";
 import type { Screen, RouteId } from "@/pages/Index";
@@ -12,8 +12,9 @@ interface NearbyScreenProps {
   onToggleFavorite: (routeId: RouteId) => void;
 }
 
-const SNAP_POINTS = [0, -140, -280];
-const MAP_HEIGHTS = [280, 420, 560];
+// 3 snap positions: up (routes visible), middle, down (full map)
+const SNAP_POINTS = [200, 0, -200];
+const MAP_HEIGHTS = [180, 380, 600];
 
 type RouteCardData = {
   id: RouteId;
@@ -32,12 +33,19 @@ const allRoutes: RouteCardData[] = [
 ];
 
 const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenProps) => {
-  const [snapIndex, setSnapIndex] = useState(0);
+  const [snapIndex, setSnapIndex] = useState(1); // start at middle
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [etaKey, setEtaKey] = useState(0);
   const controls = useAnimation();
 
   const handleDragEnd = (_: any, info: PanInfo) => {
     const currentY = SNAP_POINTS[snapIndex];
     const projectedY = currentY + info.offset.y + info.velocity.y * 0.2;
+
+    // Check for pull-to-refresh: if at top snap and pulling down
+    if (snapIndex === 0 && info.offset.y > 60) {
+      triggerRefresh();
+    }
 
     let closest = 0;
     let minDist = Infinity;
@@ -53,9 +61,22 @@ const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenP
     controls.start({ y: SNAP_POINTS[closest], transition: { type: "spring", stiffness: 400, damping: 35 } });
   };
 
-  const isLifted = snapIndex === 0;
+  const triggerRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setEtaKey((k) => k + 1);
+      setIsRefreshing(false);
+    }, 1200);
+  }, []);
 
-  // Sort: favorites first
+  const handleRouteClick = useCallback((routeId: RouteId) => {
+    onNavigate("route-detail", routeId);
+  }, [onNavigate]);
+
+  // 0 = sheet up (small map), 1 = middle, 2 = sheet down (big map)
+  const isSheetUp = snapIndex === 0;
+  const isSheetDown = snapIndex === 2;
+
   const sortedRoutes = [...allRoutes].sort((a, b) => {
     const aFav = favorites.includes(a.id) ? 0 : 1;
     const bFav = favorites.includes(b.id) ? 0 : 1;
@@ -97,7 +118,7 @@ const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenP
 
         <div className="flex items-center gap-2">
           <div className="w-20">
-            <ETACountdown initialMinutes={route.eta} color={color} highlighted />
+            <ETACountdown key={`${route.id}-${etaKey}`} initialMinutes={route.eta} color={color} highlighted />
           </div>
           <motion.button
             className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -124,34 +145,54 @@ const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenP
 
   return (
     <div className="flex flex-col relative overflow-hidden" style={{ height: "100%" }}>
+      {/* Pull-to-refresh indicator */}
+      <motion.div
+        className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-primary/90 rounded-full px-3 py-1.5"
+        initial={{ opacity: 0, y: -30 }}
+        animate={isRefreshing ? { opacity: 1, y: 0 } : { opacity: 0, y: -30 }}
+        transition={{ duration: 0.3 }}
+      >
+        <motion.div animate={isRefreshing ? { rotate: 360 } : {}} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}>
+          <RefreshCw className="w-3.5 h-3.5 text-primary-foreground" />
+        </motion.div>
+        <span className="text-[11px] font-bold text-primary-foreground">Refreshing ETAs…</span>
+      </motion.div>
+
+      {/* Map */}
       <motion.div
         animate={{ height: MAP_HEIGHTS[snapIndex] }}
         transition={{ type: "spring", stiffness: 400, damping: 35 }}
         className="shrink-0"
       >
-        <MapArea />
+        <MapArea onRouteClick={handleRouteClick} />
       </motion.div>
 
+      {/* Draggable bottom sheet */}
       <motion.div
         drag="y"
-        dragConstraints={{ top: SNAP_POINTS[2], bottom: SNAP_POINTS[0] }}
+        dragConstraints={{ top: SNAP_POINTS[2], bottom: SNAP_POINTS[0] + 80 }}
         dragElastic={0.15}
         onDragEnd={handleDragEnd}
         animate={controls}
+        initial={{ y: SNAP_POINTS[1] }}
         className="flex flex-col flex-1 rounded-t-3xl -mt-4 relative z-10 bg-card"
         style={{
           touchAction: "none",
-          boxShadow: isLifted ? "var(--sheet-shadow-lifted)" : "var(--sheet-shadow)",
+          boxShadow: isSheetUp
+            ? "var(--sheet-shadow-lifted)"
+            : "var(--sheet-shadow)",
         }}
       >
+        {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
           <motion.div
             className="w-10 h-1 rounded-full bg-muted-foreground/30"
-            animate={{ width: isLifted ? 40 : 28, opacity: isLifted ? 1 : 0.5 }}
+            animate={{ width: isSheetDown ? 28 : 40, opacity: isSheetDown ? 0.4 : 1 }}
             transition={{ duration: 0.2 }}
           />
         </div>
 
+        {/* Search bar */}
         <div onClick={() => onNavigate("search")} className="cursor-pointer px-1">
           <SearchBar />
         </div>
@@ -164,9 +205,14 @@ const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenP
           </div>
         )}
 
-        <div className="w-full mt-1">
+        {/* Route cards */}
+        <motion.div
+          className="w-full mt-1"
+          animate={{ opacity: isSheetDown ? 0.3 : 1 }}
+          transition={{ duration: 0.2 }}
+        >
           {sortedRoutes.map((route, i) => renderRouteCard(route, i === sortedRoutes.length - 1))}
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
