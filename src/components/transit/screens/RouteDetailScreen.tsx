@@ -1,4 +1,4 @@
-import { X, Pin, Star, Users, ChevronRight, Navigation } from "lucide-react";
+import { X, Pin, Star, Users, ChevronRight, Navigation, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Screen, RouteId } from "@/pages/Index";
 import ETACountdown from "@/components/transit/ETACountdown";
@@ -6,6 +6,8 @@ import ETACountdown from "@/components/transit/ETACountdown";
 interface RouteDetailScreenProps {
   onNavigate: (screen: Screen) => void;
   selectedRoute: RouteId;
+  isFavorite: boolean;
+  onToggleFavorite: (routeId: RouteId) => void;
 }
 
 const routeData: Record<RouteId, {
@@ -73,7 +75,7 @@ const routeData: Record<RouteId, {
   },
 };
 
-const RouteDetailScreen = ({ onNavigate, selectedRoute }: RouteDetailScreenProps) => {
+const RouteDetailScreen = ({ onNavigate, selectedRoute, isFavorite, onToggleFavorite }: RouteDetailScreenProps) => {
   const route = routeData[selectedRoute];
   const color = `hsl(var(${route.colorVar}))`;
 
@@ -100,9 +102,16 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute }: RouteDetailScreenProps
             <span className="text-sm font-semibold text-white/80 mt-1 block">{route.destination}</span>
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <button className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <Pin className="w-4 h-4 text-white" />
-            </button>
+            <motion.button
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: isFavorite ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)" }}
+              onClick={() => onToggleFavorite(selectedRoute)}
+              whileTap={{ scale: 0.8 }}
+              animate={isFavorite ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.3 }}
+            >
+              <Heart className="w-4 h-4" fill={isFavorite ? "white" : "none"} stroke="white" strokeWidth={2} />
+            </motion.button>
             <button
               onClick={() => onNavigate("nearby")}
               className="w-8 h-8 rounded-full bg-destructive flex items-center justify-center"
