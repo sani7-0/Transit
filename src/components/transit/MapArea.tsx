@@ -96,7 +96,7 @@ const MapArea = ({ onRouteClick }: MapAreaProps) => {
       // Hover effects on visible line
       hitArea.on("mouseover", () => {
         line.setStyle({ weight: 7, opacity: 0.9, dashArray: undefined });
-        hitArea.getElement()?.style.setProperty("cursor", "pointer");
+        (hitArea.getElement() as HTMLElement | null)?.style.setProperty("cursor", "pointer");
       });
       hitArea.on("mouseout", () => {
         line.setStyle({ weight: 4, opacity: 0.5, dashArray: "8 6" });
