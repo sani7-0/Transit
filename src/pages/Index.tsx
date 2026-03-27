@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import NearbyScreen from "@/components/transit/screens/NearbyScreen";
+import { useFavorites } from "@/hooks/useFavorites";
 import RouteDetailScreen from "@/components/transit/screens/RouteDetailScreen";
 import TripDetailScreen from "@/components/transit/screens/TripDetailScreen";
 import SearchScreen from "@/components/transit/screens/SearchScreen";
@@ -32,6 +33,7 @@ const Index = () => {
   const [selectedRoute, setSelectedRoute] = useState<RouteId>("55");
   const [direction, setDirection] = useState(1);
   const [isDark, setIsDark] = useState(false);
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
   const handleNavigate = (s: Screen, routeId?: RouteId) => {
     setDirection(screenOrder[s] > screenOrder[screen] ? 1 : -1);
@@ -47,9 +49,9 @@ const Index = () => {
   const renderScreen = () => {
     switch (screen) {
       case "nearby":
-        return <NearbyScreen onNavigate={handleNavigate} />;
+        return <NearbyScreen onNavigate={handleNavigate} favorites={favorites} onToggleFavorite={toggleFavorite} />;
       case "route-detail":
-        return <RouteDetailScreen onNavigate={handleNavigate} selectedRoute={selectedRoute} />;
+        return <RouteDetailScreen onNavigate={handleNavigate} selectedRoute={selectedRoute} isFavorite={isFavorite(selectedRoute)} onToggleFavorite={toggleFavorite} />;
       case "trip-detail":
         return <TripDetailScreen onNavigate={handleNavigate} />;
       case "search":
