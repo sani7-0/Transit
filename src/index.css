@@ -62,49 +62,49 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217 91% 60%;
 
-    --font-display: 'Nunito', sans-serif;
+    --font-display: 'Figtree', sans-serif;
   }
 
   .dark {
-    --background: 225 25% 6%;
+    --background: 218 35% 5%;
     --foreground: 0 0% 95%;
-    --card: 225 22% 10%;
+    --card: 220 30% 8%;
     --card-foreground: 0 0% 95%;
-    --popover: 225 22% 10%;
+    --popover: 220 30% 8%;
     --popover-foreground: 0 0% 95%;
-    --primary: 152 65% 40%;
+    --primary: 152 70% 42%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 16%;
+    --secondary: 220 22% 14%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 220 18% 15%;
-    --muted-foreground: 215 20% 60%;
-    --accent: 220 20% 16%;
+    --muted: 220 20% 12%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 220 22% 14%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 35%;
+    --destructive: 0 70% 42%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 18% 18%;
-    --input: 220 18% 18%;
-    --ring: 152 65% 40%;
+    --border: 220 20% 15%;
+    --input: 220 20% 15%;
+    --ring: 152 70% 42%;
 
-    /* Neon route colors for dark mode */
-    --route-green: 152 70% 45%;
-    --route-purple: 268 65% 55%;
-    --route-orange: 24 100% 55%;
-    --route-blue: 210 90% 55%;
-    --route-red: 0 80% 55%;
-    --route-teal: 178 65% 45%;
+    /* Neon route colors for dark mode — fully vivid */
+    --route-green: 152 80% 48%;
+    --route-purple: 268 75% 60%;
+    --route-orange: 24 100% 58%;
+    --route-blue: 210 95% 58%;
+    --route-red: 0 85% 58%;
+    --route-teal: 178 70% 48%;
 
-    --sheet-shadow: 0 -8px 30px -5px hsla(152, 65%, 40%, 0.15);
-    --sheet-shadow-lifted: 0 -16px 50px -5px hsla(152, 65%, 40%, 0.25);
+    --sheet-shadow: 0 -8px 30px -5px hsla(152, 70%, 42%, 0.15);
+    --sheet-shadow-lifted: 0 -16px 50px -5px hsla(152, 70%, 42%, 0.25);
 
-    --sidebar-background: 225 25% 8%;
+    --sidebar-background: 218 35% 6%;
     --sidebar-foreground: 240 5% 96%;
-    --sidebar-primary: 152 65% 40%;
+    --sidebar-primary: 152 70% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 18% 14%;
+    --sidebar-accent: 220 20% 12%;
     --sidebar-accent-foreground: 240 5% 96%;
-    --sidebar-border: 220 18% 14%;
-    --sidebar-ring: 152 65% 40%;
+    --sidebar-border: 220 20% 12%;
+    --sidebar-ring: 152 70% 42%;
   }
 }
 

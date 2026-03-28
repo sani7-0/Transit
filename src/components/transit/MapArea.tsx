@@ -1,20 +1,18 @@
 import { Settings, Navigation } from "lucide-react";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { RouteId } from "@/pages/Index";
 
-const routeIdMap: RouteId[] = ["55", "15", "metro2"];
-
 const staticMarkers = [
-  { pos: [45.5088, -73.5700] as [number, number], color: "hsl(152,60%,32%)", label: "🚌", name: "Bus 55", routeId: "55" as RouteId },
-  { pos: [45.5095, -73.5650] as [number, number], color: "hsl(210,75%,45%)", label: "🚌", name: "Bus 15", routeId: "15" as RouteId },
-  { pos: [45.5078, -73.5680] as [number, number], color: "hsl(268,50%,40%)", label: "Ⓜ", name: "Metro Line 2", routeId: "metro2" as RouteId },
+  { pos: [45.5088, -73.5700] as [number, number], color: "hsl(var(--route-green))", label: "🚌", name: "Bus 55", routeId: "55" as RouteId },
+  { pos: [45.5095, -73.5650] as [number, number], color: "hsl(var(--route-blue))", label: "🚌", name: "Bus 15", routeId: "15" as RouteId },
+  { pos: [45.5078, -73.5680] as [number, number], color: "hsl(var(--route-purple))", label: "Ⓜ", name: "Metro Line 2", routeId: "metro2" as RouteId },
 ];
 
 const routePaths: { color: string; routeId: RouteId; path: [number, number][] }[] = [
   {
-    color: "hsl(152,60%,32%)",
+    color: "hsl(var(--route-green))",
     routeId: "55",
     path: [
       [45.5055, -73.5720], [45.5070, -73.5710], [45.5088, -73.5700],
@@ -22,7 +20,7 @@ const routePaths: { color: string; routeId: RouteId; path: [number, number][] }[
     ],
   },
   {
-    color: "hsl(210,75%,45%)",
+    color: "hsl(var(--route-blue))",
     routeId: "15",
     path: [
       [45.5095, -73.5700], [45.5095, -73.5675], [45.5095, -73.5650],
@@ -30,7 +28,7 @@ const routePaths: { color: string; routeId: RouteId; path: [number, number][] }[
     ],
   },
   {
-    color: "hsl(268,50%,40%)",
+    color: "hsl(var(--route-purple))",
     routeId: "metro2",
     path: [
       [45.5060, -73.5650], [45.5070, -73.5665], [45.5078, -73.5680],
@@ -49,6 +47,14 @@ const getPositionOnPath = (path: [number, number][], progress: number): [number,
   const segment = Math.min(Math.floor(progress * totalSegments), totalSegments - 1);
   const segProgress = (progress * totalSegments) - segment;
   return lerp(path[segment], path[segment + 1], segProgress);
+};
+
+// Resolve CSS variable colors at runtime
+const resolveColor = (cssColor: string): string => {
+  const match = cssColor.match(/var\((--[^)]+)\)/);
+  if (!match) return cssColor;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim();
+  return value ? `hsl(${value})` : cssColor;
 };
 
 interface MapAreaProps {
@@ -72,34 +78,38 @@ const MapArea = ({ onRouteClick }: MapAreaProps) => {
       attributionControl: false,
     });
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png").addTo(map);
+    // Use a muted, low-saturation tile layer
+    const isDark = document.documentElement.classList.contains("dark");
+    const tileUrl = isDark
+      ? "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png";
+    L.tileLayer(tileUrl).addTo(map);
 
-    // Draw clickable route lines
+    // Draw solid, thick route lines
     routePaths.forEach((route) => {
-      // Invisible wide polyline for easier clicking
+      const resolvedColor = resolveColor(route.color);
+
       const hitArea = L.polyline(route.path, {
         color: "transparent",
-        weight: 20,
+        weight: 24,
         opacity: 0,
       }).addTo(map);
 
-      // Visible dashed line
       const line = L.polyline(route.path, {
-        color: route.color,
-        weight: 4,
-        opacity: 0.5,
-        dashArray: "8 6",
+        color: resolvedColor,
+        weight: 6,
+        opacity: 0.85,
+        lineCap: "round",
+        lineJoin: "round",
       }).addTo(map);
 
       const handleClick = () => onRouteClickRef.current?.(route.routeId);
 
-      // Hover effects on visible line
       hitArea.on("mouseover", () => {
-        line.setStyle({ weight: 7, opacity: 0.9, dashArray: undefined });
-        (hitArea.getElement() as HTMLElement | null)?.style.setProperty("cursor", "pointer");
+        line.setStyle({ weight: 9, opacity: 1 });
       });
       hitArea.on("mouseout", () => {
-        line.setStyle({ weight: 4, opacity: 0.5, dashArray: "8 6" });
+        line.setStyle({ weight: 6, opacity: 0.85 });
       });
       hitArea.on("click", handleClick);
       line.on("click", handleClick);
@@ -107,9 +117,10 @@ const MapArea = ({ onRouteClick }: MapAreaProps) => {
 
     // Static stop markers
     staticMarkers.forEach((m) => {
+      const resolvedColor = resolveColor(m.color);
       const icon = L.divIcon({
         className: "",
-        html: `<div style="width:28px;height:28px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer">${m.label}</div>`,
+        html: `<div style="width:28px;height:28px;border-radius:50%;background:${resolvedColor};display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer">${m.label}</div>`,
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
@@ -128,9 +139,10 @@ const MapArea = ({ onRouteClick }: MapAreaProps) => {
 
     // Animated bus dots
     const busMarkers = routePaths.map((route) => {
+      const resolvedColor = resolveColor(route.color);
       const dotIcon = L.divIcon({
         className: "",
-        html: `<div style="width:12px;height:12px;border-radius:50%;background:${route.color};border:2px solid white;box-shadow:0 0 10px ${route.color},0 2px 6px rgba(0,0,0,.3)"></div>`,
+        html: `<div style="width:12px;height:12px;border-radius:50%;background:${resolvedColor};border:2px solid white;box-shadow:0 0 12px ${resolvedColor},0 2px 6px rgba(0,0,0,.3)"></div>`,
         iconSize: [12, 12],
         iconAnchor: [6, 6],
       });

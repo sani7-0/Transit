@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Nunito', 'sans-serif'],
+        display: ['Figtree', 'sans-serif'],
       },
       colors: {
         route: {
