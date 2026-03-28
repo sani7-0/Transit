@@ -110,9 +110,9 @@ const ScheduleScreen = ({ onNavigate }: ScheduleScreenProps) => {
   const next = () => { setDirection(1); setCurrentIndex((i) => (i + 1) % routes.length); };
 
   const StatusIcon = ({ status }: { status?: string }) => {
-    if (status === "arriving") return <Zap className="w-3 h-3" style={{ color }} />;
-    if (status === "delayed") return <AlertCircle className="w-3 h-3 text-destructive" />;
-    return <CheckCircle className="w-3 h-3 text-muted-foreground" />;
+    if (status === "arriving") return <Zap className="w-3.5 h-3.5" style={{ color }} />;
+    if (status === "delayed") return <AlertCircle className="w-3.5 h-3.5 text-destructive" />;
+    return <CheckCircle className="w-3.5 h-3.5 text-muted-foreground" />;
   };
 
   const statusLabel = (status?: string) => {
@@ -135,7 +135,7 @@ const ScheduleScreen = ({ onNavigate }: ScheduleScreenProps) => {
           <div>
             <motion.span
               key={route.number}
-              className="text-[52px] font-extrabold text-white font-display leading-none"
+              className="text-[56px] font-extrabold text-white font-display leading-none"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -169,7 +169,7 @@ const ScheduleScreen = ({ onNavigate }: ScheduleScreenProps) => {
               <motion.button
                 key={r.number}
                 onClick={() => goTo(i)}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold font-display transition-all ${
+                className={`px-4 py-1.5 rounded-full text-sm font-bold font-display transition-all ${
                   i === currentIndex
                     ? "bg-white text-foreground shadow-md"
                     : "bg-white/20 text-white"
@@ -196,35 +196,35 @@ const ScheduleScreen = ({ onNavigate }: ScheduleScreenProps) => {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: direction > 0 ? -60 : 60, opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="flex flex-col px-4 py-4 gap-3"
+          className="flex flex-col px-4 py-5 gap-4"
         >
           {route.schedule.map((block) => (
             <div key={block.label} className="bg-card rounded-2xl overflow-hidden shadow-sm border border-border/50">
               {/* Block header */}
               <div
-                className="flex items-center gap-2 px-4 py-3"
+                className="flex items-center gap-2 px-4 py-3.5"
                 style={{ borderLeft: `4px solid ${color}` }}
               >
-                <Clock className="w-3.5 h-3.5" style={{ color }} />
-                <span className="text-xs font-extrabold text-foreground uppercase tracking-wide">{block.label}</span>
-                <span className="text-[10px] text-muted-foreground ml-auto">{block.times.length} departures</span>
+                <Clock className="w-4 h-4" style={{ color }} />
+                <span className="text-sm font-extrabold text-foreground uppercase tracking-wide">{block.label}</span>
+                <span className="text-xs text-muted-foreground ml-auto">{block.times.length} departures</span>
               </div>
 
-              {/* Times */}
+              {/* Times — larger, more whitespace */}
               {block.times.map((t, i) => (
                 <motion.div
                   key={t.time}
-                  className="flex items-center justify-between px-4 py-3 border-t border-border/30"
+                  className="flex items-center justify-between px-4 py-4 border-t border-border/30"
                   whileTap={{ scale: 0.98, backgroundColor: "hsl(var(--muted))" }}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-foreground font-display w-20">{t.time}</span>
+                    <span className="text-lg font-bold text-foreground font-display w-24">{t.time}</span>
                     {t.eta && (
                       <motion.span
-                        className="text-xs font-extrabold font-display px-2.5 py-1 rounded-full"
+                        className="text-sm font-extrabold font-display px-3 py-1.5 rounded-full"
                         style={{
                           backgroundColor: t.status === "arriving" ? color : `${color}18`,
                           color: t.status === "arriving" ? "white" : color,
@@ -239,7 +239,7 @@ const ScheduleScreen = ({ onNavigate }: ScheduleScreenProps) => {
                   <div className="flex items-center gap-1.5">
                     <StatusIcon status={t.status} />
                     <span
-                      className="text-[11px] font-bold"
+                      className="text-xs font-bold"
                       style={{ color: statusTextColor(t.status) }}
                     >
                       {statusLabel(t.status)}

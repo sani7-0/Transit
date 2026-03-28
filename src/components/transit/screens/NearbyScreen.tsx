@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { motion, useAnimation, PanInfo } from "framer-motion";
-import { Heart, RefreshCw } from "lucide-react";
+import { Heart, RefreshCw, Users } from "lucide-react";
 import MapArea from "@/components/transit/MapArea";
 import SearchBar from "@/components/transit/SearchBar";
 import type { Screen, RouteId } from "@/pages/Index";
@@ -12,7 +12,6 @@ interface NearbyScreenProps {
   onToggleFavorite: (routeId: RouteId) => void;
 }
 
-// 3 snap positions: up (routes visible), middle, down (full map)
 const SNAP_POINTS = [200, 0, -200];
 const MAP_HEIGHTS = [180, 380, 600];
 
@@ -23,17 +22,19 @@ type RouteCardData = {
   destination: string;
   colorVar: string;
   eta: number;
+  nextEtas: number[];
+  crowding: number;
   isMetro?: boolean;
 };
 
 const allRoutes: RouteCardData[] = [
-  { id: "55", number: "55", direction: "North", destination: "Station Saint-Laurent", colorVar: "--route-green", eta: 3 },
-  { id: "metro2", number: "2", direction: "Côte-Vertu", destination: "Station Berri-UQAM", colorVar: "--route-purple", eta: 2, isMetro: true },
-  { id: "15", number: "15", direction: "West", destination: "De Maisonneuve / No 205", colorVar: "--route-blue", eta: 5 },
+  { id: "55", number: "55", direction: "North", destination: "Station Saint-Laurent", colorVar: "--route-green", eta: 3, nextEtas: [12, 19], crowding: 72 },
+  { id: "metro2", number: "2", direction: "Côte-Vertu", destination: "Station Berri-UQAM", colorVar: "--route-purple", eta: 2, nextEtas: [6, 10], crowding: 86, isMetro: true },
+  { id: "15", number: "15", direction: "West", destination: "De Maisonneuve / No 205", colorVar: "--route-blue", eta: 5, nextEtas: [14, 22], crowding: 58 },
 ];
 
 const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenProps) => {
-  const [snapIndex, setSnapIndex] = useState(1); // start at middle
+  const [snapIndex, setSnapIndex] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [etaKey, setEtaKey] = useState(0);
   const controls = useAnimation();
@@ -42,7 +43,6 @@ const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenP
     const currentY = SNAP_POINTS[snapIndex];
     const projectedY = currentY + info.offset.y + info.velocity.y * 0.2;
 
-    // Check for pull-to-refresh: if at top snap and pulling down
     if (snapIndex === 0 && info.offset.y > 60) {
       triggerRefresh();
     }
@@ -73,7 +73,6 @@ const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenP
     onNavigate("route-detail", routeId);
   }, [onNavigate]);
 
-  // 0 = sheet up (small map), 1 = middle, 2 = sheet down (big map)
   const isSheetUp = snapIndex === 0;
   const isSheetDown = snapIndex === 2;
 
@@ -91,53 +90,67 @@ const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenP
       <motion.div
         key={route.id}
         layout
-        className={`w-full px-5 py-3.5 flex items-center justify-between cursor-pointer ${!isLast ? "border-b border-border/10" : ""}`}
+        className={`w-full px-5 py-4 flex items-stretch gap-4 cursor-pointer ${!isLast ? "border-b border-border/5" : ""}`}
         style={{ backgroundColor: color }}
         onClick={() => onNavigate("route-detail", route.id)}
         whileTap={{ scale: 0.98, opacity: 0.9 }}
       >
-        <div className="flex flex-col gap-0.5 flex-1">
-          {route.isMetro ? (
-            <div className="flex items-center gap-2">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="11" stroke="white" strokeWidth="2" />
-                <path d="M6 16L9 8H11L12 12L13 8H15L18 16" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <div className="w-7 h-7 rounded-full flex items-center justify-center bg-route-orange">
-                <span className="text-xs font-extrabold text-white font-display">{route.number}</span>
+        {/* Left: route number + info */}
+        <div className="flex flex-col justify-between flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div>
+              {route.isMetro ? (
+                <div className="flex items-center gap-2">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="11" stroke="white" strokeWidth="2" />
+                    <path d="M6 16L9 8H11L12 12L13 8H15L18 16" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center bg-route-orange">
+                    <span className="text-sm font-extrabold text-white font-display">{route.number}</span>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-[72px] font-extrabold leading-none text-white font-display tracking-tighter">{route.number}</span>
+              )}
+            </div>
+            <motion.button
+              className="w-9 h-9 rounded-full flex items-center justify-center mt-1"
+              style={{ backgroundColor: isFav ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.12)" }}
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite(route.id); }}
+              whileTap={{ scale: 0.8 }}
+              animate={isFav ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.3 }}
+            >
+              <Heart className="w-4 h-4" fill={isFav ? "white" : "none"} stroke="white" strokeWidth={2} />
+            </motion.button>
+          </div>
+
+          <div className="mt-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-white/90 bg-white/15 rounded-full px-2 py-0.5">⊕ {route.direction}</span>
+              <div className="flex items-center gap-1 ml-1">
+                <Users className="w-3 h-3 text-white/60" />
+                <div className="w-10 h-1 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-white/70" style={{ width: `${route.crowding}%` }} />
+                </div>
               </div>
             </div>
-          ) : (
-            <span className="text-[44px] font-extrabold leading-none text-white font-display tracking-tight">{route.number}</span>
-          )}
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[11px] font-bold text-white/90 bg-white/15 rounded-full px-2 py-0.5">⊕ {route.direction}</span>
+            <span className="text-[11px] font-semibold text-white/70 mt-0.5 block truncate">{route.destination}</span>
           </div>
-          <span className="text-[11px] font-semibold text-white/80 mt-0.5">{route.destination}</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="w-20">
-            <ETACountdown key={`${route.id}-${etaKey}`} initialMinutes={route.eta} color={color} highlighted />
+        {/* Right: ETA tiles */}
+        <div className="flex flex-col gap-1.5 w-24 shrink-0">
+          <div className="flex-1">
+            <ETACountdown key={`${route.id}-${etaKey}`} initialMinutes={route.eta} color={color} highlighted size="md" />
           </div>
-          <motion.button
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: isFav ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)" }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(route.id);
-            }}
-            whileTap={{ scale: 0.8 }}
-            animate={isFav ? { scale: [1, 1.3, 1] } : {}}
-            transition={{ duration: 0.3 }}
-          >
-            <Heart
-              className="w-4 h-4"
-              fill={isFav ? "white" : "none"}
-              stroke="white"
-              strokeWidth={2}
-            />
-          </motion.button>
+          <div className="flex gap-1">
+            {route.nextEtas.map((eta, i) => (
+              <div key={i} className="flex-1 bg-white/12 rounded-lg flex items-center justify-center py-1">
+                <span className="text-[13px] font-extrabold text-white/80 font-display tabular-nums">{eta}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </motion.div>
     );
@@ -178,9 +191,7 @@ const NearbyScreen = ({ onNavigate, favorites, onToggleFavorite }: NearbyScreenP
         className="flex flex-col flex-1 rounded-t-3xl -mt-4 relative z-10 bg-card"
         style={{
           touchAction: "none",
-          boxShadow: isSheetUp
-            ? "var(--sheet-shadow-lifted)"
-            : "var(--sheet-shadow)",
+          boxShadow: isSheetUp ? "var(--sheet-shadow-lifted)" : "var(--sheet-shadow)",
         }}
       >
         {/* Drag handle */}
