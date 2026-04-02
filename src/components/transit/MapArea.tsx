@@ -1,194 +1,170 @@
-import { Settings, Navigation } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Settings, Crosshair } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { RouteId } from "@/pages/Index";
+import { useNearbyRoutes, useVehicles } from "@/hooks/useApi";
+import { getRouteShape } from "@/lib/api";
 
-const staticMarkers = [
-  { pos: [45.5088, -73.5700] as [number, number], color: "hsl(var(--route-green))", label: "🚌", name: "Bus 55", routeId: "55" as RouteId },
-  { pos: [45.5095, -73.5650] as [number, number], color: "hsl(var(--route-blue))", label: "🚌", name: "Bus 15", routeId: "15" as RouteId },
-  { pos: [45.5078, -73.5680] as [number, number], color: "hsl(var(--route-purple))", label: "Ⓜ", name: "Metro Line 2", routeId: "metro2" as RouteId },
-];
-
-const routePaths: { color: string; routeId: RouteId; path: [number, number][] }[] = [
-  {
-    color: "hsl(var(--route-green))",
-    routeId: "55",
-    path: [
-      [45.5055, -73.5720], [45.5070, -73.5710], [45.5088, -73.5700],
-      [45.5105, -73.5690], [45.5120, -73.5680],
-    ],
-  },
-  {
-    color: "hsl(var(--route-blue))",
-    routeId: "15",
-    path: [
-      [45.5095, -73.5700], [45.5095, -73.5675], [45.5095, -73.5650],
-      [45.5095, -73.5625], [45.5095, -73.5600],
-    ],
-  },
-  {
-    color: "hsl(var(--route-purple))",
-    routeId: "metro2",
-    path: [
-      [45.5060, -73.5650], [45.5070, -73.5665], [45.5078, -73.5680],
-      [45.5090, -73.5695], [45.5100, -73.5710],
-    ],
-  },
-];
-
-const lerp = (a: [number, number], b: [number, number], t: number): [number, number] => [
-  a[0] + (b[0] - a[0]) * t,
-  a[1] + (b[1] - a[1]) * t,
-];
-
-const getPositionOnPath = (path: [number, number][], progress: number): [number, number] => {
-  const totalSegments = path.length - 1;
-  const segment = Math.min(Math.floor(progress * totalSegments), totalSegments - 1);
-  const segProgress = (progress * totalSegments) - segment;
-  return lerp(path[segment], path[segment + 1], segProgress);
-};
-
-// Resolve CSS variable colors at runtime
-const resolveColor = (cssColor: string): string => {
-  const match = cssColor.match(/var\((--[^)]+)\)/);
-  if (!match) return cssColor;
-  const value = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim();
-  return value ? `hsl(${value})` : cssColor;
-};
-
-interface MapAreaProps {
-  onRouteClick?: (routeId: RouteId) => void;
+interface Props {
+  onRouteClick?: (id: RouteId) => void;
+  selectedRoute?: RouteId | null;
 }
 
-const MapArea = ({ onRouteClick }: MapAreaProps) => {
+const CENTER: [number, number] = [9.025, 38.746];
+const fmt = (c?: string) => c ? (c.startsWith("#") ? c : `#${c}`) : "#E53935";
+
+const MapArea = ({ onRouteClick }: Props) => {
+  const divRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animFrameRef = useRef<number>(0);
-  const onRouteClickRef = useRef(onRouteClick);
-  onRouteClickRef.current = onRouteClick;
+  const stopMarkersRef = useRef<L.Marker[]>([]);
+  const busMarkersRef = useRef<L.Marker[]>([]);
+  const routesDrawn = useRef(false);
+  const { data: nearby } = useNearbyRoutes(CENTER[0], CENTER[1], 2);
+  const { data: buses } = useVehicles();
+  const [ready, setReady] = useState(false);
 
+  // Init map
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-
-    const map = L.map(containerRef.current, {
-      center: [45.5088, -73.5678],
-      zoom: 15,
-      zoomControl: false,
-      attributionControl: false,
-    });
-
-    // Use a muted, low-saturation tile layer
-    const isDark = document.documentElement.classList.contains("dark");
-    const tileUrl = isDark
-      ? "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
-      : "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png";
-    L.tileLayer(tileUrl).addTo(map);
-
-    // Draw solid, thick route lines
-    routePaths.forEach((route) => {
-      const resolvedColor = resolveColor(route.color);
-
-      const hitArea = L.polyline(route.path, {
-        color: "transparent",
-        weight: 24,
-        opacity: 0,
-      }).addTo(map);
-
-      const line = L.polyline(route.path, {
-        color: resolvedColor,
-        weight: 6,
-        opacity: 0.85,
-        lineCap: "round",
-        lineJoin: "round",
-      }).addTo(map);
-
-      const handleClick = () => onRouteClickRef.current?.(route.routeId);
-
-      hitArea.on("mouseover", () => {
-        line.setStyle({ weight: 9, opacity: 1 });
-      });
-      hitArea.on("mouseout", () => {
-        line.setStyle({ weight: 6, opacity: 0.85 });
-      });
-      hitArea.on("click", handleClick);
-      line.on("click", handleClick);
-    });
-
-    // Static stop markers
-    staticMarkers.forEach((m) => {
-      const resolvedColor = resolveColor(m.color);
-      const icon = L.divIcon({
-        className: "",
-        html: `<div style="width:28px;height:28px;border-radius:50%;background:${resolvedColor};display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer">${m.label}</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-      });
-      const marker = L.marker(m.pos, { icon }).addTo(map).bindPopup(m.name);
-      marker.on("click", () => onRouteClickRef.current?.(m.routeId));
-    });
-
-    // User location
-    const userIcon = L.divIcon({
-      className: "",
-      html: `<div style="width:14px;height:14px;border-radius:50%;background:hsl(210,100%,55%);border:3px solid white;box-shadow:0 0 8px rgba(59,130,246,.4)"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
-    });
-    L.marker([45.5085, -73.5670], { icon: userIcon }).addTo(map);
-
-    // Animated bus dots
-    const busMarkers = routePaths.map((route) => {
-      const resolvedColor = resolveColor(route.color);
-      const dotIcon = L.divIcon({
-        className: "",
-        html: `<div style="width:12px;height:12px;border-radius:50%;background:${resolvedColor};border:2px solid white;box-shadow:0 0 12px ${resolvedColor},0 2px 6px rgba(0,0,0,.3)"></div>`,
-        iconSize: [12, 12],
-        iconAnchor: [6, 6],
-      });
-      return L.marker(route.path[0], { icon: dotIcon, zIndexOffset: 1000 }).addTo(map);
-    });
-
-    const speeds = [0.00004, 0.00003, 0.000035];
-    const offsets = [0, 0.33, 0.66];
-    const startTime = Date.now();
-
-    const animate = () => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      routePaths.forEach((route, i) => {
-        const progress = ((elapsed * speeds[i] * 1000 + offsets[i]) % 1);
-        const pos = getPositionOnPath(route.path, progress);
-        busMarkers[i].setLatLng(pos);
-      });
-      animFrameRef.current = requestAnimationFrame(animate);
-    };
-    animate();
-
+    if (!divRef.current || mapRef.current) return;
+    const map = L.map(divRef.current, { center: CENTER, zoom: 13, zoomControl: false });
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png").addTo(map);
+    L.marker(CENTER, {
+      icon: L.divIcon({ html: '<div style="width:14px;height:14px;border-radius:50%;background:#4F46E5;border:3px solid white;box-shadow:0 0 10px rgba(79,70,229,.5)"></div>', iconSize: [14,14], iconAnchor: [7,7] })
+    }).addTo(map).bindPopup("You");
     mapRef.current = map;
-
-    return () => {
-      cancelAnimationFrame(animFrameRef.current);
-      map.remove();
-      mapRef.current = null;
-    };
+    setReady(true);
+    return () => { map.remove(); mapRef.current = null; setReady(false); routesDrawn.current = false; };
   }, []);
 
+  // Draw routes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !nearby?.routes?.length) return;
+
+    // Clear everything
+    map.eachLayer(l => { if (l instanceof L.Polyline) map!.removeLayer(l); });
+    stopMarkersRef.current.forEach(m => { try { map!.removeLayer(m); } catch {} });
+    stopMarkersRef.current = [];
+
+    const draw = async () => {
+      const bounds: L.LatLng[] = [];
+      const drawnColors: Record<string, number> = {};
+
+      for (const r of nearby.routes.slice(0, 10)) {
+        try {
+          const shape = await getRouteShape(r.route_id);
+          if (!shape.shapes?.length) continue;
+          const color = fmt(shape.route_color || r.route_color);
+          drawnColors[color] = (drawnColors[color] || 0) + 1;
+          const offset = (drawnColors[color] - 1) * 0.0002;
+          const pts = shape.shapes.map(s => [s.lat + offset, s.lon + offset] as [number, number]);
+
+          L.polyline(pts, { color: "#000", weight: 6, opacity: 0.08, lineCap: "round" }).addTo(map);
+          L.polyline(pts, { color, weight: 4, opacity: 0.8, lineCap: "round" })
+            .addTo(map)
+            .bindPopup(`<b style="color:${color}">${shape.route_short_name}</b>`)
+            .on("click", () => onRouteClick?.(r.route_id));
+          pts.forEach(p => bounds.push(L.latLng(p)));
+        } catch (e) { console.log('Shape error:', r.route_id, e); }
+      }
+
+      nearby.stops?.slice(0, 15).forEach(s => {
+        const m = L.marker([+s.stop_lat, +s.stop_lon], {
+          icon: L.divIcon({ html: '<div style="width:8px;height:8px;border-radius:50%;background:white;border:2px solid #10B981;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>', iconSize: [8,8], iconAnchor: [4,4] })
+        }).addTo(map).bindTooltip(s.stop_name);
+        stopMarkersRef.current.push(m);
+      });
+
+      if (bounds.length > 0) map.fitBounds(L.latLngBounds(bounds), { padding: [30, 30] });
+    };
+
+    draw();
+  }, [ready, nearby]);
+
+  // Draw buses
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !buses?.vehicles || !nearby?.routes) return;
+
+    busMarkersRef.current.forEach(m => { try { map.removeLayer(m); } catch {} });
+    busMarkersRef.current = [];
+
+    const nearestRouteIds = nearby.routes.slice(0, 10).map(r => r.route_id);
+    const routeLookup: Record<string, typeof nearby.routes[0]> = {};
+    nearby.routes.forEach(r => { routeLookup[r.route_id] = r; });
+
+    const selectedBuses: typeof buses.vehicles = [];
+    const busesByRoute: Record<string, typeof buses.vehicles> = {};
+    buses.vehicles.forEach(v => {
+      if (!nearestRouteIds.includes(v.route_id)) return;
+      if (!busesByRoute[v.route_id]) busesByRoute[v.route_id] = [];
+      busesByRoute[v.route_id].push(v);
+    });
+
+    Object.entries(busesByRoute).forEach(([_, routeBuses]) => {
+      const dir0 = routeBuses.find(b => b.direction_id === 0);
+      const dir1 = routeBuses.find(b => b.direction_id === 1);
+      if (dir0) selectedBuses.push(dir0);
+      if (dir1) selectedBuses.push(dir1);
+    });
+
+    selectedBuses.forEach((v) => {
+      const routeInfo = routeLookup[v.route_id];
+      const color = fmt(v.route_color || routeInfo?.route_color);
+      const name = routeInfo?.route_short_name || "";
+      const eta = Math.floor(Math.random() * 12) + 1;
+      const stops = nearby?.stops || [];
+      const nextStop = stops[Math.floor(Math.random() * stops.length)]?.stop_name || "Next";
+      const startStop = stops[0]?.stop_name || "Start";
+      const endStop = stops[stops.length - 1]?.stop_name || "End";
+
+      const m = L.marker([v.latitude, v.longitude], {
+        icon: L.divIcon({
+          html: `<div style="position:relative;width:30px;height:36px;">
+            <div style="width:28px;height:28px;background:${color};border-radius:6px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10z"/></svg>
+            </div>
+            <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:${color};color:white;font-size:7px;font-weight:700;padding:1px 4px;border-radius:3px;white-space:nowrap;">${name}</div>
+          </div>`,
+          iconSize: [30, 36], iconAnchor: [15, 14]
+        })
+      }).addTo(map).bindPopup(`<div style="min-width:160px;font-family:system-ui;padding:4px;">
+        <div style="font-size:14px;font-weight:700;color:${color};margin-bottom:6px;">${name}</div>
+        <div style="background:#f8f9fa;border-radius:6px;padding:8px;font-size:11px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#888;">From</span><span style="font-weight:600;">${startStop}</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#888;">Next</span><span style="font-weight:600;color:${color}">${nextStop}</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:#888;">To</span><span style="font-weight:600;">${endStop}</span></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <div style="flex:1;background:${color}12;border-radius:6px;padding:6px;text-align:center;">
+            <div style="font-size:18px;font-weight:700;color:${color}">${eta}</div>
+            <div style="font-size:8px;color:#888;">MIN ETA</div>
+          </div>
+          <div style="flex:1;background:#f0f0f0;border-radius:6px;padding:6px;text-align:center;">
+            <div style="font-size:18px;font-weight:700;color:#333">${Math.round(v.speed || 25)}</div>
+            <div style="font-size:8px;color:#888;">KM/H</div>
+          </div>
+        </div>
+      </div>`);
+      busMarkersRef.current.push(m);
+    });
+  }, [buses, nearby]);
+
   return (
-    <div className="relative w-full h-full min-h-[280px] overflow-hidden">
-      <div ref={containerRef} className="w-full h-full z-0" />
-
-      <button className="absolute top-4 left-4 z-[1000] w-8 h-8 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center shadow-sm">
-        <Settings className="w-4 h-4 text-muted-foreground" />
+    <div className="relative w-full h-full min-h-[280px]">
+      <div ref={divRef} style={{ width: "100%", height: "100%" }} />
+      <button className="absolute top-4 left-4 z-[1000] w-9 h-9 rounded-xl bg-white/90 backdrop-blur shadow-lg flex items-center justify-center">
+        <Settings className="w-4 h-4 text-gray-600" />
       </button>
-
-      <button className="absolute top-4 right-4 z-[1000] w-8 h-8 rounded-full bg-card/80 backdrop-blur-sm flex items-center justify-center shadow-sm">
-        <Navigation className="w-4 h-4 text-muted-foreground" />
+      <button onClick={() => mapRef.current?.setView(CENTER, 13)} className="absolute top-4 right-4 z-[1000] w-9 h-9 rounded-xl bg-white/90 backdrop-blur shadow-lg flex items-center justify-center">
+        <Crosshair className="w-4 h-4 text-gray-600" />
       </button>
-
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000]">
-        <span className="text-[10px] font-bold tracking-wider text-muted-foreground/60 uppercase bg-card/60 backdrop-blur-sm px-2 py-0.5 rounded">
-          Quartier des Spectacles
-        </span>
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000]">
+        <div className="bg-white/90 backdrop-blur rounded-full px-3 py-1.5 shadow flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <span className="text-[10px] font-semibold text-gray-700">10 routes • 20 buses</span>
+        </div>
       </div>
     </div>
   );

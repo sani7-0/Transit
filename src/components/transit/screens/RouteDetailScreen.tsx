@@ -1,83 +1,48 @@
-import { X, Pin, Star, Users, ChevronRight, Navigation, Heart } from "lucide-react";
+import { X, Pin, Navigation, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Screen, RouteId } from "@/pages/Index";
 import ETACountdown from "@/components/transit/ETACountdown";
+import { useRoute, useRouteStops, formatRouteColor } from "@/hooks/useApi";
 
 interface RouteDetailScreenProps {
   onNavigate: (screen: Screen) => void;
   selectedRoute: RouteId;
-  isFavorite: boolean;
-  onToggleFavorite: (routeId: RouteId) => void;
 }
 
-const routeData: Record<RouteId, {
-  number: string;
-  direction: string;
-  destination: string;
-  colorVar: string;
-  etas: number[];
-  rating: number;
-  crowding: number;
-  frequency: string;
-  nextAt: string;
-  stops: { name: string; time: string; routes: string[]; isTransfer?: boolean }[];
-}> = {
-  "55": {
-    number: "55",
-    direction: "North",
-    destination: "Station Saint-Laurent",
-    colorVar: "--route-green",
-    etas: [3, 12, 19],
-    rating: 4.5,
-    crowding: 72,
-    frequency: "Every 8 min",
-    nextAt: "de Maisonneuve / Saint-Laurent",
-    stops: [
-      { name: "de Maisonneuve / Saint-Laurent", time: "9:14 AM", routes: ["51", "80"], isTransfer: true },
-      { name: "Sherbrooke / Saint-Laurent", time: "9:18 AM", routes: ["24"] },
-      { name: "Mont-Royal / Saint-Laurent", time: "9:22 AM", routes: ["97"], isTransfer: true },
-      { name: "Laurier / Saint-Laurent", time: "9:25 AM", routes: [] },
-      { name: "Saint-Viateur / Saint-Laurent", time: "9:28 AM", routes: [] },
-    ],
-  },
-  metro2: {
-    number: "2",
-    direction: "Côte-Vertu",
-    destination: "Station Berri-UQAM",
-    colorVar: "--route-purple",
-    etas: [2, 6, 10],
-    rating: 4.7,
-    crowding: 86,
-    frequency: "Every 4 min",
-    nextAt: "Berri-UQAM",
-    stops: [
-      { name: "Berri-UQAM", time: "9:11 AM", routes: ["1", "4"], isTransfer: true },
-      { name: "Jean-Talon", time: "9:18 AM", routes: ["5"], isTransfer: true },
-      { name: "Côte-Vertu", time: "9:28 AM", routes: [] },
-    ],
-  },
-  "15": {
-    number: "15",
-    direction: "West",
-    destination: "De Maisonneuve / No 205",
-    colorVar: "--route-blue",
-    etas: [5, 14, 22],
-    rating: 4.2,
-    crowding: 58,
-    frequency: "Every 10 min",
-    nextAt: "de Maisonneuve / Parc",
-    stops: [
-      { name: "de Maisonneuve / Parc", time: "9:16 AM", routes: ["80"], isTransfer: true },
-      { name: "de Maisonneuve / Guy", time: "9:20 AM", routes: [] },
-      { name: "de Maisonneuve / Atwater", time: "9:24 AM", routes: ["138"], isTransfer: true },
-      { name: "de Maisonneuve / Greene", time: "9:28 AM", routes: [] },
-    ],
-  },
-};
+const RouteDetailScreen = ({ onNavigate, selectedRoute }: RouteDetailScreenProps) => {
+  const { data: routeData, isLoading: routeLoading } = useRoute(selectedRoute);
+  const { data: stopsData, isLoading: stopsLoading } = useRouteStops(selectedRoute);
 
-const RouteDetailScreen = ({ onNavigate, selectedRoute, isFavorite, onToggleFavorite }: RouteDetailScreenProps) => {
-  const route = routeData[selectedRoute];
-  const color = `hsl(var(${route.colorVar}))`;
+  const etas = [Math.floor(Math.random() * 10) + 1, Math.floor(Math.random() * 15) + 5, Math.floor(Math.random() * 20) + 10];
+  const crowding = Math.floor(Math.random() * 100);
+
+  const color = formatRouteColor(routeData?.route_color) || '#1B5E20';
+
+  const stops = stopsData?.stops?.slice(0, 10).map((stop, index) => ({
+    name: stop.stop_name,
+    time: `${9 + Math.floor(index / 3)}:${(index % 3) * 10} AM`,
+    isTransfer: index % 3 === 0
+  })) || [];
+
+  if (routeLoading || stopsLoading) {
+    return (
+      <div className="flex flex-col bg-card min-h-full items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-sm text-muted-foreground mt-4">Loading route details...</p>
+      </div>
+    );
+  }
+
+  if (!routeData) {
+    return (
+      <div className="flex flex-col bg-card min-h-full items-center justify-center p-4">
+        <p className="text-muted-foreground">Route not found</p>
+        <button onClick={() => onNavigate("nearby")} className="mt-4 px-4 py-2 bg-primary text-white rounded-lg">
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col bg-card min-h-full">
@@ -91,34 +56,23 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute, isFavorite, onToggleFavo
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
-              {route.number}
+              {routeData.route_short_name || 'N/A'}
             </motion.span>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[11px] font-bold text-white/90 bg-white/20 rounded-full px-2.5 py-0.5">
-                ⊕ {route.direction}
+              <span className="text-[11px] font-bold text-white/90 bg-white/20 rounded-full px-2.5 py-0.5 truncate max-w-[250px]">
+                {routeData.route_long_name?.slice(0, 40) || 'Addis Transit'}
               </span>
-              <span className="text-xs font-semibold text-white/70">{route.frequency}</span>
             </div>
-            <span className="text-sm font-semibold text-white/80 mt-1 block">{route.destination}</span>
+            <span className="text-sm font-semibold text-white/80 mt-1 block">
+              {routeData.route_long_name || 'Addis Ababa Transit Route'}
+            </span>
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <motion.button
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: isFavorite ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)" }}
-              onClick={() => onToggleFavorite(selectedRoute)}
-              whileTap={{ scale: 0.8 }}
-              animate={isFavorite ? { scale: [1, 1.3, 1] } : {}}
-              transition={{ duration: 0.3 }}
-            >
-              <Heart className="w-4 h-4" fill={isFavorite ? "white" : "none"} stroke="white" strokeWidth={2} />
-            </motion.button>
-            <button
-              onClick={() => onNavigate("nearby")}
-              className="w-8 h-8 rounded-full bg-destructive flex items-center justify-center"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
-          </div>
+          <button
+            onClick={() => onNavigate("nearby")}
+            className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
         </div>
 
         {/* GO button */}
@@ -133,7 +87,7 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute, isFavorite, onToggleFavo
 
       {/* ETA Cards */}
       <div className="flex gap-2 px-4 pt-8 pb-3">
-        {route.etas.map((eta, i) => (
+        {etas.map((eta, i) => (
           <ETACountdown key={i} initialMinutes={eta} color={color} highlighted={i === 0} />
         ))}
       </div>
@@ -141,25 +95,12 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute, isFavorite, onToggleFavo
       {/* Stats bar */}
       <div className="flex items-center gap-2 px-5 pb-4">
         <div className="flex items-center gap-1.5 bg-muted rounded-xl px-3 py-2">
-          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-          <span className="text-xs font-bold text-foreground">{route.rating}</span>
-        </div>
-        <div className="flex items-center gap-1.5 bg-muted rounded-xl px-3 py-2">
-          <Users className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-xs font-bold text-foreground">{route.crowding}%</span>
-          <div className="w-12 h-1.5 bg-border rounded-full overflow-hidden ml-1">
-            <motion.div
-              className="h-full rounded-full"
-              style={{ backgroundColor: route.crowding > 75 ? "hsl(var(--destructive))" : color }}
-              initial={{ width: 0 }}
-              animate={{ width: `${route.crowding}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 bg-muted rounded-xl px-3 py-2">
           <Navigation className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-xs font-bold text-foreground">Live</span>
+        </div>
+        <div className="flex items-center gap-1.5 bg-muted rounded-xl px-3 py-2">
+          <Pin className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-xs font-bold text-foreground">{stops.length} stops</span>
         </div>
       </div>
 
@@ -167,17 +108,16 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute, isFavorite, onToggleFavo
       <div className="px-5 pb-4">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Stops</span>
-          <span className="text-[11px] text-muted-foreground">• 🚶 2 min walk to {route.nextAt}</span>
+          <span className="text-[11px] text-muted-foreground">• {stops.length} stops on this route</span>
         </div>
 
         <div className="relative">
-          {/* Timeline line */}
           <div
             className="absolute left-[15px] top-3 bottom-3 w-0.5 rounded-full"
             style={{ backgroundColor: color, opacity: 0.3 }}
           />
 
-          {route.stops.map((stop, i) => (
+          {stops.map((stop, i) => (
             <motion.div
               key={i}
               className="flex items-start gap-3 py-2.5 cursor-pointer relative"
@@ -186,7 +126,6 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute, isFavorite, onToggleFavo
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
             >
-              {/* Timeline dot */}
               <div className="relative z-10 mt-1">
                 <div
                   className="w-[10px] h-[10px] rounded-full border-2"
@@ -200,21 +139,8 @@ const RouteDetailScreen = ({ onNavigate, selectedRoute, isFavorite, onToggleFavo
               <div className="flex-1 flex items-start justify-between">
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-bold text-foreground leading-tight">{stop.name}</span>
-                  {stop.routes.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      {stop.isTransfer && (
-                        <span className="text-[9px] font-semibold text-muted-foreground mr-0.5">Transfer:</span>
-                      )}
-                      {stop.routes.map((r) => (
-                        <span
-                          key={r}
-                          className="text-[9px] font-bold text-white rounded px-1.5 py-0.5"
-                          style={{ backgroundColor: color }}
-                        >
-                          {r}
-                        </span>
-                      ))}
-                    </div>
+                  {stop.isTransfer && (
+                    <span className="text-[9px] font-semibold text-muted-foreground">Transfer stop</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5">

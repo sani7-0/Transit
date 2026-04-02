@@ -2,44 +2,79 @@ import { useState, useRef, useEffect } from "react";
 import { Search, MapPin, Home, Briefcase, ChevronRight, MoreHorizontal, X, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Screen } from "@/pages/Index";
+import { useRoutes, useStops, formatRouteColor } from "@/hooks/useApi";
 
 interface SearchScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, routeId?: string) => void;
 }
 
 const savedPlaces = [
-  { icon: Home, title: "Home", subtitle: "22 Chapel St", filled: true },
-  { icon: Briefcase, title: "Studio", subtitle: "7 Silver St", filled: true },
-  { icon: MapPin, title: "Tiltyard", subtitle: "Whitehall Pl", filled: true },
+  { icon: Home, title: "Home", subtitle: "Bole, Addis Ababa", filled: true },
+  { icon: Briefcase, title: "Office", subtitle: "Kirkos, Addis Ababa", filled: true },
+  { icon: MapPin, title: "Merkato", subtitle: "Addis Ababa", filled: true },
 ];
 
 const recentPlaces = [
-  { title: "Botanical Garden", subtitle: "Montreal" },
-  { title: "Cinéma Beaubien", subtitle: "Montreal" },
-  { title: "Jean-Talon Market", subtitle: "Montreal" },
-  { title: "Parc La Fontaine", subtitle: "Montreal" },
-];
-
-const allPlaces = [
-  ...savedPlaces.map((p) => p.title),
-  ...recentPlaces.map((p) => p.title),
-  "Mont-Royal Station",
-  "McGill University",
-  "Old Port",
-  "Place des Arts",
-  "Berri-UQAM Station",
+  { title: "Addis Ababa University", subtitle: "Sidist Kilo Campus" },
+  { title: "Bole International Airport", subtitle: "Addis Ababa" },
+  { title: "Meskel Square", subtitle: "Addis Ababa" },
+  { title: "Holy Trinity Cathedral", subtitle: "Addis Ababa" },
 ];
 
 const SearchScreen = ({ onNavigate }: SearchScreenProps) => {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch routes and stops from API
+  const { data: routesData } = useRoutes();
+  const { data: stopsData } = useStops();
+
+  // Combine routes and stops for search
+  const searchableItems = [
+    ...(routesData?.routes?.map(route => ({
+      id: route.route_id,
+      type: 'route' as const,
+      title: route.route_short_name || `Route ${route.route_id}`,
+      subtitle: route.route_long_name || 'Addis Transit Route',
+      color: formatRouteColor(route.route_color)
+    })) || []),
+    ...(stopsData?.stops?.slice(0, 20).map(stop => ({
+      id: stop.stop_id,
+      type: 'stop' as const,
+      title: stop.stop_name,
+      subtitle: `Stop • ${stop.stop_id}`,
+      color: '#1B5E20'
+    })) || [])
+  ];
+
+  // Add sample places from Addis Ababa
+  const allPlaces = [
+    ...searchableItems,
+    ...savedPlaces.map(p => ({ id: p.title, type: 'place' as const, title: p.title, subtitle: p.subtitle, color: '#4A5568' })),
+    ...recentPlaces.map(p => ({ id: p.title, type: 'place' as const, title: p.title, subtitle: p.subtitle, color: '#4A5568' })),
+    { id: 'Bole Medhanealem', type: 'place', title: 'Bole Medhanealem', subtitle: 'Addis Ababa', color: '#4A5568' },
+    { id: 'Arat Kilo', type: 'place', title: 'Arat Kilo', subtitle: 'Addis Ababa', color: '#4A5568' },
+    { id: '6 Kilo', type: 'place', title: '6 Kilo', subtitle: 'Addis Ababa', color: '#4A5568' },
+  ];
+
   const filtered = query.trim()
-    ? allPlaces.filter((p) => p.toLowerCase().includes(query.toLowerCase()))
+    ? allPlaces.filter(p => 
+        p.title.toLowerCase().includes(query.toLowerCase()) ||
+        p.subtitle.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 10)
     : [];
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  const handleItemClick = (item: typeof allPlaces[0]) => {
+    if (item.type === 'route') {
+      onNavigate("route-detail", item.id);
+    } else {
+      onNavigate("planner");
+    }
+  };
 
   return (
     <div className="flex flex-col bg-card min-h-full">
@@ -52,7 +87,7 @@ const SearchScreen = ({ onNavigate }: SearchScreenProps) => {
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Line or destination"
+              placeholder="Search routes, stops, or places"
               className="bg-transparent text-base font-semibold text-primary-foreground placeholder:text-primary-foreground/50 outline-none flex-1 font-display"
             />
             {query && (
@@ -81,24 +116,34 @@ const SearchScreen = ({ onNavigate }: SearchScreenProps) => {
             className="flex flex-col"
           >
             {filtered.length > 0 ? (
-              filtered.map((place) => (
+              filtered.map((item) => (
                 <motion.button
-                  key={place}
+                  key={item.id}
                   className="flex items-center gap-3 px-5 py-4 border-b border-border/20 text-left active:bg-muted/50 transition-colors"
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => onNavigate("planner")}
+                  onClick={() => handleItemClick(item)}
                 >
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                    <MapPin className="w-4 h-4 text-primary" />
+                  <div 
+                    className="w-9 h-9 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: `${item.color}20` }}
+                  >
+                    {item.type === 'route' ? (
+                      <span className="text-xs font-bold" style={{ color: item.color }}>{item.title.slice(0, 2)}</span>
+                    ) : (
+                      <MapPin className="w-4 h-4" style={{ color: item.color }} />
+                    )}
                   </div>
-                  <span className="text-base font-bold text-foreground">{place}</span>
+                  <div className="flex flex-col">
+                    <span className="text-base font-bold text-foreground">{item.title}</span>
+                    <span className="text-xs text-muted-foreground">{item.subtitle}</span>
+                  </div>
                 </motion.button>
               ))
             ) : (
               <div className="flex flex-col items-center py-16 px-6">
                 <Search className="w-10 h-10 text-muted-foreground mb-3" />
-                <span className="text-base font-bold text-foreground">No results</span>
-                <span className="text-sm text-muted-foreground mt-1">Try a different search term</span>
+                <span className="text-base font-bold text-foreground">No results found</span>
+                <span className="text-sm text-muted-foreground mt-1">Try searching for routes, stops, or places in Addis Ababa</span>
               </div>
             )}
           </motion.div>
